@@ -1,0 +1,16 @@
+# Vulnerability scan reports
+# These are generated and should not be committed
+
+*.json
+*.html
+*.sarif
+
+# Trivy cache
+.trivycache/
+
+# Grype cache
+.grype/
+
+# Reports
+vulnerability-report-*.json
+scan-results-*.json

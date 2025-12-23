@@ -1,0 +1,25 @@
+apiVersion: v2
+name: argo-rollouts
+description: Argo Rollouts - Progressive Delivery for Kubernetes
+type: application
+version: 1.0.0
+appVersion: "1.6.0"
+
+dependencies:
+  - name: argo-rollouts
+    version: 2.35.0
+    repository: https://argoproj.github.io/argo-helm
+
+keywords:
+  - progressive-delivery
+  - canary
+  - blue-green
+  - rollouts
+
+maintainers:
+  - name: Platform Team
+    email: platform@example.com
+
+home: https://argoproj.github.io/argo-rollouts/
+sources:
+  - https://github.com/argoproj/argo-rollouts

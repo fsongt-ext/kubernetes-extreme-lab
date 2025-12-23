@@ -1,0 +1,55 @@
+##############################################################################
+# OPA Gatekeeper Configuration
+#
+# Platform team policy enforcement
+##############################################################################
+
+gatekeeper:
+  # Replicas (single for lab)
+  replicas: 1
+  auditReplicasCount: 1
+
+  # Resource limits
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Audit configuration
+  audit:
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  # Enable mutation (beta feature)
+  enableMutation: true
+
+  # Constraint violations limit
+  constraintViolationsLimit: 20
+
+  # Audit interval
+  auditInterval: 60
+
+  # Enable metrics
+  metricsPort: 8888
+
+  # Pod security policy
+  psp:
+    enabled: false
+
+  # Validating webhook timeout
+  validatingWebhookTimeoutSeconds: 5
+
+  # Exempt namespaces from policy enforcement
+  exemptNamespaces:
+    - kube-system
+    - kube-public
+    - kube-node-lease
+    - gatekeeper-system

@@ -1,0 +1,123 @@
+##############################################################################
+# Grafana Configuration
+#
+# Central observability visualization platform
+##############################################################################
+
+grafana:
+  # Replicas (single for lab)
+  replicas: 1
+
+  # Resource limits
+  resources:
+    limits:
+      cpu: 400m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Admin credentials
+  adminUser: admin
+  adminPassword: admin  # Change in production!
+
+  # Data sources
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        # Mimir for metrics
+        - name: Mimir
+          type: prometheus
+          url: http://mimir-query-frontend.observability.svc.cluster.local:8080/prometheus
+          access: proxy
+          isDefault: true
+          jsonData:
+            httpMethod: POST
+            timeInterval: 30s
+
+        # Loki for logs
+        - name: Loki
+          type: loki
+          url: http://loki-gateway.observability.svc.cluster.local:80
+          access: proxy
+          jsonData:
+            maxLines: 1000
+
+        # Tempo for traces
+        - name: Tempo
+          type: tempo
+          url: http://tempo-query-frontend.observability.svc.cluster.local:3100
+          access: proxy
+          jsonData:
+            httpMethod: GET
+            tracesToLogs:
+              datasourceUid: loki
+              tags: ['job', 'instance', 'pod', 'namespace']
+
+  # Dashboard providers
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: 'default'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/default
+
+  # Pre-loaded dashboards (via ConfigMaps)
+  dashboardsConfigMaps:
+    default: grafana-dashboards
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 80
+
+  # Ingress (disabled for lab, using port-forward)
+  ingress:
+    enabled: false
+
+  # Persistence
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClassName: local-path
+
+  # Plugins to install
+  plugins:
+    - grafana-piechart-panel
+    - grafana-clock-panel
+
+  # Environment variables
+  env:
+    GF_FEATURE_TOGGLES_ENABLE: "traceqlEditor"
+
+  # Grafana.ini configuration
+  grafana.ini:
+    server:
+      domain: grafana.lab.local
+      root_url: http://grafana.lab.local
+
+    analytics:
+      check_for_updates: false
+      reporting_enabled: false
+
+    security:
+      admin_user: admin
+      admin_password: admin
+
+    users:
+      allow_sign_up: false
+      auto_assign_org_role: Viewer
+
+    auth.anonymous:
+      enabled: false
+
+    log:
+      mode: console
+      level: info

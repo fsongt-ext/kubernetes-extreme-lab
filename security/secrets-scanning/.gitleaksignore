@@ -1,0 +1,8 @@
+# Gitleaks ignore file
+# Add false positives here
+
+# Example test secrets (not real)
+applications/demo-app/tests/fixtures/test-secret.yaml:generic-api-key:1
+
+# Documentation examples
+docs/SECURITY.md:generic-api-key:45

@@ -1,0 +1,52 @@
+##############################################################################
+# Argo Rollouts Configuration
+#
+# Progressive delivery controller
+##############################################################################
+
+argo-rollouts:
+  # Controller configuration
+  controller:
+    # Replicas (single for lab)
+    replicas: 1
+
+    # Resource limits
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  # Dashboard
+  dashboard:
+    enabled: true
+
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 25m
+        memory: 32Mi
+
+    service:
+      type: ClusterIP
+      port: 3100
+
+  # Service Monitor for Prometheus
+  serviceMonitor:
+    enabled: true
+
+  # Traffic routing integrations
+  trafficRouterPlugins:
+    # Istio support
+    - name: "argoproj-labs/istio"
+      location: "https://github.com/argoproj-labs/rollouts-plugin-trafficrouter-istio/releases/download/v0.1.0/istio-plugin-linux-amd64"
+
+  # Metrics
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true

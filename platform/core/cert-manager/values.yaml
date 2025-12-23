@@ -1,0 +1,59 @@
+##############################################################################
+# cert-manager Configuration
+##############################################################################
+
+cert-manager:
+  # Install CRDs
+  installCRDs: true
+
+  # Global configuration
+  global:
+    leaderElection:
+      namespace: cert-manager
+
+  # Resource limits for lab environment
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+  # Webhook configuration
+  webhook:
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 20m
+        memory: 32Mi
+
+  # CA injector configuration
+  cainjector:
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  # Prometheus metrics
+  prometheus:
+    enabled: true
+    servicemonitor:
+      enabled: true
+      prometheusInstance: default
+
+  # Startup API check
+  startupapicheck:
+    enabled: true
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 20m
+        memory: 32Mi

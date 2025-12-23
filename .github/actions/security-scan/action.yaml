@@ -1,0 +1,81 @@
+name: 'Security Policy Scan'
+description: 'Run Conftest policy checks against Kubernetes manifests and Helm charts'
+author: 'Security Team'
+
+inputs:
+  policy-path:
+    description: 'Path to Conftest policies'
+    required: true
+  target:
+    description: 'Target files or directories to scan'
+    required: true
+  namespace:
+    description: 'Policy namespace'
+    required: false
+    default: 'main'
+  fail-on-warn:
+    description: 'Fail on warnings'
+    required: false
+    default: 'false'
+
+outputs:
+  results:
+    description: 'Scan results'
+    value: ${{ steps.scan.outputs.results }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Conftest
+      shell: bash
+      run: |
+        wget https://github.com/open-policy-agent/conftest/releases/download/v0.49.1/conftest_0.49.1_Linux_x86_64.tar.gz
+        tar xzf conftest_0.49.1_Linux_x86_64.tar.gz
+        sudo mv conftest /usr/local/bin/
+        conftest --version
+
+    - name: Run Conftest scan
+      id: scan
+      shell: bash
+      run: |
+        set -o pipefail
+
+        ARGS="--namespace ${{ inputs.namespace }}"
+        if [ "${{ inputs.fail-on-warn }}" = "true" ]; then
+          ARGS="$ARGS --fail-on-warn"
+        fi
+
+        conftest test ${{ inputs.target }} \
+          --policy ${{ inputs.policy-path }} \
+          $ARGS \
+          --output json | tee conftest-results.json
+
+        echo "results=$(cat conftest-results.json)" >> $GITHUB_OUTPUT
+
+    - name: Upload results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: conftest-results
+        path: conftest-results.json
+        retention-days: 30
+
+    - name: Generate summary
+      shell: bash
+      if: always()
+      run: |
+        echo "### Security Policy Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Policy Path:** \`${{ inputs.policy-path }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Target:** \`${{ inputs.target }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Namespace:** \`${{ inputs.namespace }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ -f conftest-results.json ]; then
+          FAILURES=$(jq '[.[] | select(.failures != null) | .failures | length] | add // 0' conftest-results.json)
+          WARNINGS=$(jq '[.[] | select(.warnings != null) | .warnings | length] | add // 0' conftest-results.json)
+
+          echo "**Results:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Failures: $FAILURES" >> $GITHUB_STEP_SUMMARY
+          echo "- Warnings: $WARNINGS" >> $GITHUB_STEP_SUMMARY
+        fi

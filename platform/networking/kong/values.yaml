@@ -1,0 +1,99 @@
+##############################################################################
+# Kong API Gateway Configuration
+#
+# Optimized for lab environment with database-less (DB-less) mode
+##############################################################################
+
+kong:
+  # Deployment configuration
+  deployment:
+    kong:
+      enabled: true
+
+  # Environment variables
+  env:
+    # Database-less mode (no PostgreSQL required)
+    database: "off"
+
+    # Declarative configuration
+    declarative_config: /kong_dbless/kong.yml
+
+    # Admin API
+    admin_listen: "0.0.0.0:8001, 0.0.0.0:8444 ssl"
+    admin_gui_listen: "0.0.0.0:8002, 0.0.0.0:8445 ssl"
+
+    # Proxy configuration
+    proxy_listen: "0.0.0.0:8000, 0.0.0.0:8443 ssl http2"
+
+    # Logging
+    log_level: "notice"
+
+    # Plugins
+    plugins: "bundled,oidc"
+
+  # Resource limits for lab
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Ingress Controller
+  ingressController:
+    enabled: true
+    installCRDs: true
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+
+    env:
+      # Publish service for LoadBalancer
+      publish_service: kong/kong-proxy
+
+  # Proxy service configuration
+  proxy:
+    enabled: true
+    type: LoadBalancer
+
+    http:
+      enabled: true
+      servicePort: 80
+      containerPort: 8000
+
+    tls:
+      enabled: true
+      servicePort: 443
+      containerPort: 8443
+
+  # Admin API
+  admin:
+    enabled: true
+    type: ClusterIP
+    http:
+      enabled: true
+      servicePort: 8001
+
+  # PostgreSQL disabled (DB-less mode)
+  postgresql:
+    enabled: false
+
+  # Service Monitor for Prometheus
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus
+
+  # Enterprise features (disabled for lab)
+  enterprise:
+    enabled: false
+
+  # Manager (Admin GUI)
+  manager:
+    enabled: false

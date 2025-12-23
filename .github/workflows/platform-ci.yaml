@@ -1,0 +1,122 @@
+name: Platform CI Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'platform/**'
+      - 'infrastructure/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'platform/**'
+      - 'infrastructure/**'
+
+jobs:
+  terraform-validate:
+    name: Terraform Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Run tfsec security scan
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: infrastructure/terraform
+
+  ansible-lint:
+    name: Ansible Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ansible-lint
+        uses: ansible/ansible-lint@main
+        with:
+          args: infrastructure/ansible/
+
+  helm-platform-validation:
+    name: Platform Helm Charts Validation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chart:
+          - istio
+          - kong
+          - argocd
+          - cert-manager
+          - vault
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+
+      - name: Lint chart
+        run: |
+          if [ -d "platform/${{ matrix.chart }}" ]; then
+            helm lint platform/${{ matrix.chart }}
+          fi
+
+      - name: Template chart
+        run: |
+          if [ -d "platform/${{ matrix.chart }}" ]; then
+            helm template ${{ matrix.chart }} platform/${{ matrix.chart }} --validate
+          fi
+
+  kubernetes-manifest-validation:
+    name: Kubernetes Manifest Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Kubernetes manifests
+        uses: instrumenta/kubeval-action@master
+        with:
+          files: platform/,gitops/
+
+      - name: Run kubeconform
+        uses: docker://ghcr.io/yannh/kubeconform:latest
+        with:
+          entrypoint: '/kubeconform'
+          args: '-summary -output json platform/ gitops/'
+
+  policy-validation:
+    name: Policy Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate OPA policies
+        run: |
+          docker run --rm -v $(pwd)/policies/opa:/policies \
+            openpolicyagent/opa:latest test /policies -v
+
+      - name: Validate Kyverno policies
+        uses: kyverno/action-install-cli@v0.2.0
+
+      - name: Test Kyverno policies
+        run: |
+          kyverno test policies/kyverno/

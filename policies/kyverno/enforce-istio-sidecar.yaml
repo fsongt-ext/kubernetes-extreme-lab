@@ -1,0 +1,77 @@
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: inject-istio-sidecar
+  annotations:
+    policies.kyverno.io/title: Inject Istio Sidecar
+    policies.kyverno.io/category: Istio
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Namespace, Pod
+    policies.kyverno.io/description: >-
+      Istio requires namespace labels for automatic sidecar injection.
+      This policy automatically adds the istio-injection=enabled label to
+      application namespaces (excluding system namespaces).
+spec:
+  background: false
+  rules:
+    - name: inject-istio-annotation
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kube-public
+                - kube-node-lease
+                - argocd
+                - cert-manager
+                - istio-system
+                - observability
+                - kyverno
+      mutate:
+        patchStrategicMerge:
+          metadata:
+            labels:
+              istio-injection: enabled
+
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-istio-sidecar
+  annotations:
+    policies.kyverno.io/title: Verify Istio Sidecar Injection
+    policies.kyverno.io/category: Istio
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      Validates that Pods in istio-enabled namespaces have the istio-proxy
+      sidecar container, unless explicitly disabled via annotation.
+spec:
+  validationFailureAction: audit  # Use 'enforce' to block non-compliant pods
+  background: true
+  rules:
+    - name: check-istio-sidecar
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - demo  # Add other app namespaces
+      exclude:
+        any:
+          - resources:
+              annotations:
+                sidecar.istio.io/inject: "false"
+      validate:
+        message: "Pod must have istio-proxy sidecar container."
+        pattern:
+          spec:
+            containers:
+              - name: istio-proxy

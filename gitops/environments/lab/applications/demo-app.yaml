@@ -1,0 +1,59 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: demo-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"  # After all platform components
+    notifications.argoproj.io/subscribe.on-deployed.slack: "platform-deployments"
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: "platform-alerts"
+spec:
+  project: applications
+
+  source:
+    repoURL: https://github.com/yourusername/kubernetes-extreme-lab
+    targetRevision: main
+    path: applications/helm-charts/demo-app
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-lab.yaml  # Lab environment overrides
+      parameters:
+        - name: image.tag
+          value: "1.0.0"  # Override with CI/CD
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: demo
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # Ignore differences in rollout replicas (managed by HPA/Rollout controller)
+  ignoreDifferences:
+    - group: argoproj.io
+      kind: Rollout
+      jsonPointers:
+        - /spec/replicas
+
+  # Health assessment
+  info:
+    - name: 'Image Tag'
+      value: '1.0.0'
+    - name: 'Environment'
+      value: 'lab'
+    - name: 'Deployment Strategy'
+      value: 'Canary (Argo Rollouts)'

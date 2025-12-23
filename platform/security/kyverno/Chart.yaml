@@ -1,0 +1,25 @@
+apiVersion: v2
+name: kyverno
+description: Kyverno - Kubernetes Native Policy Management
+type: application
+version: 1.0.0
+appVersion: "1.11.0"
+
+dependencies:
+  - name: kyverno
+    version: 3.1.0
+    repository: https://kyverno.github.io/kyverno
+
+keywords:
+  - policy
+  - security
+  - governance
+  - kyverno
+
+maintainers:
+  - name: Application Team
+    email: appteam@example.com
+
+home: https://kyverno.io/
+sources:
+  - https://github.com/kyverno/kyverno

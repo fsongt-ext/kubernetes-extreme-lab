@@ -1,0 +1,78 @@
+---
+##############################################################################
+# K3s Role - Main Tasks
+##############################################################################
+
+- name: Check if K3s is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Display K3s installation status
+  ansible.builtin.debug:
+    msg: "K3s is {{ 'already installed' if k3s_binary.stat.exists else 'not installed' }}"
+
+- name: Create K3s config directory
+  ansible.builtin.file:
+    path: "{{ k3s_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create K3s config file
+  ansible.builtin.template:
+    src: k3s-config.yaml.j2
+    dest: "{{ k3s_config_dir }}/config.yaml"
+    mode: '0644'
+  notify: restart k3s
+
+- name: Download K3s installation script
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: '0755'
+  when: not k3s_binary.stat.exists
+
+- name: Install K3s
+  ansible.builtin.command: >
+    /tmp/k3s-install.sh
+    --write-kubeconfig-mode 0644
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    K3S_CONFIG_FILE: "{{ k3s_config_dir }}/config.yaml"
+  when: not k3s_binary.stat.exists
+  register: k3s_install
+  changed_when: k3s_install.rc == 0
+
+- name: Wait for K3s service to start
+  ansible.builtin.systemd:
+    name: k3s
+    state: started
+    enabled: true
+  register: k3s_service
+  until: k3s_service.status.ActiveState == "active"
+  retries: 5
+  delay: 10
+
+- name: Create kubectl symlink
+  ansible.builtin.file:
+    src: /usr/local/bin/k3s
+    dest: /usr/local/bin/kubectl
+    state: link
+
+- name: Setup kubectl completion
+  ansible.builtin.shell: |
+    kubectl completion bash > /etc/bash_completion.d/kubectl
+  args:
+    creates: /etc/bash_completion.d/kubectl
+
+- name: Verify K3s installation
+  ansible.builtin.command: kubectl get nodes
+  register: k3s_nodes
+  changed_when: false
+  retries: 5
+  delay: 5
+  until: k3s_nodes.rc == 0
+
+- name: Display K3s node info
+  ansible.builtin.debug:
+    var: k3s_nodes.stdout_lines

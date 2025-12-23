@@ -1,0 +1,166 @@
+##############################################################################
+# Argo CD Configuration - Base Values
+#
+# This configuration is optimized for the lab environment (2 vCPU / 8GB RAM)
+##############################################################################
+
+argo-cd:
+  global:
+    # Domain configuration (update with your domain)
+    domain: argocd.lab.local
+
+  # Controller configuration
+  controller:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+  # Dex (OAuth2 provider) - disabled for lab, using local users
+  dex:
+    enabled: false
+
+  # Server configuration
+  server:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+    # Ingress configuration (disabled, using port-forward for lab)
+    ingress:
+      enabled: false
+
+    # Enable insecure mode for lab (no TLS)
+    extraArgs:
+      - --insecure
+
+    # Configure RBAC
+    rbacConfig:
+      policy.default: role:readonly
+      policy.csv: |
+        p, role:org-admin, applications, *, */*, allow
+        p, role:org-admin, clusters, get, *, allow
+        p, role:org-admin, repositories, get, *, allow
+        p, role:org-admin, repositories, create, *, allow
+        p, role:org-admin, repositories, update, *, allow
+        p, role:org-admin, repositories, delete, *, allow
+        g, platform-team, role:org-admin
+
+  # Repo server configuration
+  repoServer:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Redis configuration
+  redis:
+    resources:
+      limits:
+        cpu: 200m
+        memory: 128Mi
+      requests:
+        cpu: 100m
+        memory: 64Mi
+
+  # Application Set Controller
+  applicationSet:
+    enabled: true
+    replicas: 1
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+  # Notifications controller
+  notifications:
+    enabled: true
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  # Configs
+  configs:
+    # Repository credentials
+    repositories:
+      # Add your Git repositories here
+      # - url: https://github.com/yourusername/kubernetes-extreme-lab
+      #   type: git
+
+    # Resource customizations
+    resource:
+      customizations: |
+        admissionregistration.k8s.io/MutatingWebhookConfiguration:
+          ignoreDifferences: |
+            jsonPointers:
+            - /webhooks/0/clientConfig/caBundle
+        admissionregistration.k8s.io/ValidatingWebhookConfiguration:
+          ignoreDifferences: |
+            jsonPointers:
+            - /webhooks/0/clientConfig/caBundle
+
+    # Application settings
+    params:
+      # Enable server-side apply
+      application.instanceLabelKey: argocd.argoproj.io/instance
+      server.insecure: true
+
+    # Secret management
+    secret:
+      createSecret: true
+      # Update with your admin password (use bcrypt hash)
+      # Default: admin/admin
+      argocdServerAdminPassword: "$2a$10$rRyBsGSHK6.uc8fntPwVIuLVHgsAhAX7TcdrqW/XGN2u4bB08Vy7e"
+
+    # Global configuration
+    cm:
+      # Timeout settings
+      timeout.reconciliation: 180s
+      timeout.hard.reconciliation: 0
+
+      # Application settings
+      application.instanceLabelKey: argocd.argoproj.io/instance
+
+      # Resource tracking method
+      application.resourceTrackingMethod: annotation
+
+      # Exec enabled
+      exec.enabled: true
+
+      # Diff options
+      resource.compareoptions: |
+        ignoreAggregatedRoles: true
+
+    # RBAC configuration
+    rbac:
+      policy.default: role:readonly
+
+  # Enable sync windows (optional)
+  # configs:
+  #   cm:
+  #     application.sync.windows: |
+  #       - kind: allow
+  #         schedule: "0 2 * * *"
+  #         duration: 2h
+  #         applications:
+  #         - "*-prod"

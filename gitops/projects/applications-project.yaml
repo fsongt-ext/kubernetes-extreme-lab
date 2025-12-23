@@ -1,0 +1,104 @@
+---
+##############################################################################
+# Argo CD AppProject - Application Workloads
+#
+# Defines RBAC, allowed resources, and policies for application teams
+##############################################################################
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: applications
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Application workloads managed by Application Teams
+
+  # Source repositories allowed
+  sourceRepos:
+    - 'https://github.com/yourusername/kubernetes-extreme-lab'
+    - 'https://github.com/yourusername/*'  # Allow team repos
+
+  # Destination clusters and namespaces
+  destinations:
+    - namespace: 'demo'
+      server: https://kubernetes.default.svc
+    - namespace: 'dev'
+      server: https://kubernetes.default.svc
+    - namespace: 'staging'
+      server: https://kubernetes.default.svc
+    - namespace: 'prod'
+      server: https://kubernetes.default.svc
+
+  # Cluster resources NOT allowed for app teams
+  clusterResourceWhitelist: []
+
+  # Namespace resources allowed
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ServiceAccount
+    - group: 'apps'
+      kind: Deployment
+    - group: 'apps'
+      kind: StatefulSet
+    - group: 'apps'
+      kind: DaemonSet
+    - group: 'batch'
+      kind: Job
+    - group: 'batch'
+      kind: CronJob
+    - group: 'autoscaling'
+      kind: HorizontalPodAutoscaler
+    - group: 'policy'
+      kind: PodDisruptionBudget
+    - group: 'networking.k8s.io'
+      kind: Ingress
+    - group: 'networking.k8s.io'
+      kind: NetworkPolicy
+    - group: 'argoproj.io'
+      kind: Rollout
+    - group: 'argoproj.io'
+      kind: AnalysisTemplate
+    - group: 'networking.istio.io'
+      kind: VirtualService
+    - group: 'networking.istio.io'
+      kind: DestinationRule
+    - group: 'monitoring.coreos.com'
+      kind: ServiceMonitor
+
+  # Namespace resource blacklist (security restrictions)
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: ResourceQuota
+    - group: ''
+      kind: LimitRange
+    - group: 'rbac.authorization.k8s.io'
+      kind: Role
+    - group: 'rbac.authorization.k8s.io'
+      kind: RoleBinding
+
+  # Sync windows (prevent production changes during business hours)
+  syncWindows:
+    - kind: deny
+      schedule: '0 8-18 * * 1-5'  # Mon-Fri, 8am-6pm
+      duration: 10h
+      applications:
+        - '*-prod'
+      manualSync: true
+    - kind: allow
+      schedule: '* * * * *'
+      duration: 24h
+      applications:
+        - '*'
+      manualSync: true
+
+  # Orphaned resources
+  orphanedResources:
+    warn: true

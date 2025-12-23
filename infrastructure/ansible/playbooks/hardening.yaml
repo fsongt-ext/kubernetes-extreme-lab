@@ -1,0 +1,113 @@
+---
+##############################################################################
+# System Hardening Playbook
+#
+# Applies security hardening based on CIS benchmarks
+##############################################################################
+
+- name: System Security Hardening
+  hosts: k3s_cluster
+  become: true
+  gather_facts: true
+
+  vars:
+    # Firewall rules
+    allowed_ports:
+      - 6443   # Kubernetes API
+      - 10250  # Kubelet
+      - 2379   # etcd client
+      - 2380   # etcd peer
+
+    # Sysctl hardening
+    sysctl_config:
+      # Network security
+      net.ipv4.ip_forward: 1
+      net.ipv4.conf.all.rp_filter: 1
+      net.ipv4.conf.default.rp_filter: 1
+      net.ipv4.tcp_syncookies: 1
+      net.ipv4.conf.all.accept_source_route: 0
+      net.ipv4.conf.default.accept_source_route: 0
+      net.ipv4.conf.all.accept_redirects: 0
+      net.ipv4.conf.default.accept_redirects: 0
+      net.ipv4.conf.all.secure_redirects: 0
+      net.ipv4.conf.default.secure_redirects: 0
+      net.ipv4.conf.all.send_redirects: 0
+      net.ipv4.conf.default.send_redirects: 0
+      net.ipv4.icmp_echo_ignore_broadcasts: 1
+      net.ipv4.icmp_ignore_bogus_error_responses: 1
+
+      # IPv6 disable (optional)
+      # net.ipv6.conf.all.disable_ipv6: 1
+      # net.ipv6.conf.default.disable_ipv6: 1
+
+      # Kernel hardening
+      kernel.dmesg_restrict: 1
+      kernel.kptr_restrict: 2
+      kernel.yama.ptrace_scope: 1
+
+  tasks:
+    - name: Update system packages
+      ansible.builtin.package:
+        name: "*"
+        state: latest
+      when: ansible_os_family == "RedHat" or ansible_os_family == "Debian"
+
+    - name: Install security packages
+      ansible.builtin.package:
+        name:
+          - fail2ban
+          - aide
+          - auditd
+        state: present
+
+    - name: Configure sysctl for hardening
+      ansible.posix.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true
+      loop: "{{ sysctl_config | dict2items }}"
+
+    - name: Disable unnecessary services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: stopped
+        enabled: false
+      loop:
+        - bluetooth
+        - cups
+      ignore_errors: true
+
+    - name: Configure fail2ban
+      ansible.builtin.copy:
+        content: |
+          [sshd]
+          enabled = true
+          port = ssh
+          logpath = /var/log/auth.log
+          maxretry = 3
+          bantime = 3600
+        dest: /etc/fail2ban/jail.local
+        mode: '0644'
+      notify: restart fail2ban
+
+    - name: Enable and start fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: started
+        enabled: true
+
+    - name: Set secure permissions on sensitive files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: '0600'
+      loop:
+        - /etc/ssh/sshd_config
+        - /etc/shadow
+        - /etc/gshadow
+
+  handlers:
+    - name: restart fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: restarted

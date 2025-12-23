@@ -1,0 +1,184 @@
+openapi: 3.0.3
+info:
+  title: Demo App API
+  description: Sample microservice for Kubernetes Platform Lab
+  version: 1.0.0
+  contact:
+    name: Platform Team
+    email: platform@example.com
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: https://demo-app.lab.local
+    description: Lab environment
+
+paths:
+  /:
+    get:
+      summary: Home endpoint
+      operationId: getHome
+      tags:
+        - General
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Application is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /ready:
+    get:
+      summary: Readiness check
+      operationId: getReady
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Application is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ready
+
+  /api/v1/hello:
+    get:
+      summary: Hello endpoint
+      operationId: getHello
+      tags:
+        - API
+      parameters:
+        - name: name
+          in: query
+          description: Name to greet
+          required: false
+          schema:
+            type: string
+            default: World
+      responses:
+        '200':
+          description: Greeting message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  /api/v1/echo:
+    post:
+      summary: Echo endpoint
+      operationId: postEcho
+      tags:
+        - API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Echoed data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  echo:
+                    type: object
+                    additionalProperties: true
+                  timestamp:
+                    type: string
+                    format: date-time
+                  trace_id:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '405':
+          description: Method not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      operationId: getMetrics
+      tags:
+        - Observability
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  schemas:
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Hello, World!
+        timestamp:
+          type: string
+          format: date-time
+        trace_id:
+          type: string
+          example: 1234567890abcdef
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        version:
+          type: string
+          example: 1.0.0
+        uptime:
+          type: string
+          example: 1h30m45s
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Invalid request
+
+tags:
+  - name: General
+    description: General endpoints
+  - name: Health
+    description: Health and readiness checks
+  - name: API
+    description: Main API endpoints
+  - name: Observability
+    description: Observability endpoints

@@ -1,0 +1,14 @@
+# Software Bill of Materials (SBOM) files
+# These are generated artifacts and should not be committed
+
+*.spdx.json
+*.cyclonedx.json
+*.syft.json
+sbom-*.json
+
+# Vulnerability reports referencing SBOMs
+*-vulnerabilities.json
+
+# Temporary files
+*.tmp
+*.bak

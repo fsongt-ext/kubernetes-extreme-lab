@@ -1,0 +1,45 @@
+# Gitleaks configuration for secret detection
+
+title = "Kubernetes Extreme Lab - Secret Scanning"
+
+[extend]
+# Use default rules
+useDefault = true
+
+[allowlist]
+description = "Allowlisted files and patterns"
+
+# Allowlist specific files
+paths = [
+    '''\.md$''',           # Markdown documentation
+    '''\.txt$''',          # Text files
+    '''go\.sum$''',        # Go checksums
+    '''package-lock\.json$''', # NPM lock
+]
+
+# Allowlist specific regexes
+regexes = [
+    '''EXAMPLE_KEY|SAMPLE_SECRET''',  # Example/sample strings
+    '''test-secret|dummy-password''',  # Test data
+]
+
+# Allowlist specific commits (if needed)
+commits = []
+
+[[rules]]
+id = "kubernetes-token"
+description = "Kubernetes service account token"
+regex = '''eyJhbGciOiJSUzI1NiIsImtpZCI6Ii'''
+tags = ["key", "kubernetes"]
+
+[[rules]]
+id = "docker-auth"
+description = "Docker authentication token"
+regex = '''"auth":\s*"[A-Za-z0-9+/=]{50,}"'''
+tags = ["key", "docker"]
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS Access Key ID"
+regex = '''(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}'''
+tags = ["key", "aws"]

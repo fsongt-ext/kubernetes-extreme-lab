@@ -1,0 +1,334 @@
+---
+# Chaos Engineering Experiments using LitmusChaos
+# These experiments validate platform resilience under failure conditions
+
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: demo-app-pod-delete
+  namespace: demo
+spec:
+  appinfo:
+    appns: demo
+    applabel: "app=demo-app"
+    appkind: deployment
+
+  engineState: active
+
+  chaosServiceAccount: litmus-admin
+
+  experiments:
+    # Experiment 1: Random pod deletion
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: "60"  # 60 seconds
+
+            - name: CHAOS_INTERVAL
+              value: "10"  # Delete pod every 10 seconds
+
+            - name: FORCE
+              value: "false"  # Graceful termination
+
+        probe:
+          # HTTP probe to verify service availability during chaos
+          - name: check-demo-app-health
+            type: httpProbe
+            mode: Continuous
+            httpProbe/inputs:
+              url: http://demo-app.demo.svc.cluster.local:8080/health
+              insecureSkipVerify: false
+              method:
+                get:
+                  criteria: ==
+                  responseCode: "200"
+            runProperties:
+              probeTimeout: 5
+              interval: 2
+              retry: 3
+
+---
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: demo-app-network-latency
+  namespace: demo
+spec:
+  appinfo:
+    appns: demo
+    applabel: "app=demo-app"
+    appkind: deployment
+
+  engineState: active
+
+  chaosServiceAccount: litmus-admin
+
+  experiments:
+    # Experiment 2: Network latency injection
+    - name: pod-network-latency
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: "120"
+
+            - name: NETWORK_LATENCY
+              value: "2000"  # 2000ms latency
+
+            - name: JITTER
+              value: "100"  # ±100ms jitter
+
+            - name: TARGET_CONTAINER
+              value: "demo-app"
+
+        probe:
+          # Command probe to check response time
+          - name: check-response-time
+            type: cmdProbe
+            mode: Continuous
+            cmdProbe/inputs:
+              command: curl -w "%{time_total}" -o /dev/null -s http://demo-app.demo.svc.cluster.local:8080/health
+              comparator:
+                type: float
+                criteria: "<"
+                value: "5.0"  # Response should be under 5 seconds
+            runProperties:
+              probeTimeout: 10
+              interval: 5
+              retry: 2
+
+---
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: istio-sidecar-kill
+  namespace: demo
+spec:
+  appinfo:
+    appns: demo
+    applabel: "app=demo-app"
+    appkind: deployment
+
+  engineState: active
+
+  chaosServiceAccount: litmus-admin
+
+  experiments:
+    # Experiment 3: Kill Istio sidecar proxy
+    - name: container-kill
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: "60"
+
+            - name: CHAOS_INTERVAL
+              value: "15"
+
+            - name: TARGET_CONTAINER
+              value: "istio-proxy"
+
+            - name: SIGNAL
+              value: "SIGKILL"
+
+        probe:
+          # Kubernetes probe to verify service mesh recovery
+          - name: check-istio-proxy-restart
+            type: k8sProbe
+            mode: Continuous
+            k8sProbe/inputs:
+              group: ""
+              version: v1
+              resource: pods
+              namespace: demo
+              fieldSelector: status.phase=Running
+              labelSelector: app=demo-app
+              operation: present
+            runProperties:
+              probeTimeout: 5
+              interval: 2
+              retry: 3
+
+---
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: argocd-server-pod-delete
+  namespace: argocd
+spec:
+  appinfo:
+    appns: argocd
+    applabel: "app.kubernetes.io/name=argocd-server"
+    appkind: deployment
+
+  engineState: active
+
+  chaosServiceAccount: litmus-admin
+
+  experiments:
+    # Experiment 4: ArgoCD server pod deletion
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: "120"
+
+            - name: CHAOS_INTERVAL
+              value: "30"
+
+            - name: FORCE
+              value: "true"  # Force termination
+
+        probe:
+          # HTTP probe to verify ArgoCD API availability
+          - name: check-argocd-api
+            type: httpProbe
+            mode: Continuous
+            httpProbe/inputs:
+              url: http://argocd-server.argocd.svc.cluster.local/api/version
+              insecureSkipVerify: true
+              method:
+                get:
+                  criteria: ==
+                  responseCode: "200"
+            runProperties:
+              probeTimeout: 10
+              interval: 5
+              retry: 3
+
+---
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: node-memory-hog
+  namespace: litmus
+spec:
+  # Node-level chaos (requires appropriate RBAC)
+  annotationCheck: "false"
+
+  engineState: active
+
+  chaosServiceAccount: litmus-admin
+
+  experiments:
+    # Experiment 5: Memory exhaustion on node
+    - name: node-memory-hog
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: "120"
+
+            - name: MEMORY_CONSUMPTION
+              value: "80"  # Consume 80% of node memory
+
+            - name: NUMBER_OF_WORKERS
+              value: "4"
+
+            # Target specific node (optional)
+            - name: TARGET_NODE
+              value: ""
+
+        probe:
+          # Prometheus probe to verify cluster stability
+          - name: check-pod-evictions
+            type: promProbe
+            mode: Continuous
+            promProbe/inputs:
+              endpoint: http://prometheus.observability.svc.cluster.local:9090
+              query: sum(kube_pod_status_phase{phase="Evicted"})
+              comparator:
+                type: int
+                criteria: "<"
+                value: "5"  # Less than 5 evictions
+            runProperties:
+              probeTimeout: 10
+              interval: 10
+              retry: 2
+
+---
+# ChaosSchedule: Run experiments on a schedule
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosSchedule
+metadata:
+  name: scheduled-chaos
+  namespace: litmus
+spec:
+  schedule:
+    # Run chaos every day at 2 AM (non-business hours)
+    repeat:
+      timeRange:
+        startTime: "2025-01-01T02:00:00Z"
+        endTime: "2025-12-31T04:00:00Z"
+      properties:
+        minChaosInterval: "24h"
+
+  engineTemplateSpec:
+    appinfo:
+      appns: demo
+      applabel: "app=demo-app"
+      appkind: deployment
+
+    engineState: active
+
+    chaosServiceAccount: litmus-admin
+
+    experiments:
+      - name: pod-delete
+        spec:
+          components:
+            env:
+              - name: TOTAL_CHAOS_DURATION
+                value: "60"
+              - name: CHAOS_INTERVAL
+                value: "15"
+
+---
+# ServiceAccount for running chaos experiments
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: litmus-admin
+  namespace: litmus
+  labels:
+    app.kubernetes.io/name: litmus
+    app.kubernetes.io/component: chaos-operator
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: litmus-admin
+  labels:
+    app.kubernetes.io/name: litmus
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "pods/exec", "events", "replicationcontrollers"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["litmuschaos.io"]
+    resources: ["chaosengines", "chaosexperiments", "chaosresults"]
+    verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: litmus-admin
+  labels:
+    app.kubernetes.io/name: litmus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: litmus-admin
+subjects:
+  - kind: ServiceAccount
+    name: litmus-admin
+    namespace: litmus

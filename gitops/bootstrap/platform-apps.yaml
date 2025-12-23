@@ -1,0 +1,56 @@
+---
+##############################################################################
+# Platform Applications - App of Apps
+#
+# Manages all platform components (Istio, Kong, Observability, etc.)
+##############################################################################
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform-apps
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: platform
+
+  source:
+    repoURL: https://github.com/yourusername/kubernetes-extreme-lab
+    targetRevision: main
+    path: gitops/environments/lab/platform
+    directory:
+      recurse: true
+      include: '*.yaml'
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # Sync waves ensure proper ordering
+  info:
+    - name: 'Deployment Order'
+      value: |
+        Wave 0: Core (cert-manager, sealed-secrets)
+        Wave 1: Argo CD
+        Wave 2: Networking (Istio, Kong)
+        Wave 3: Security (Kyverno, Gatekeeper)
+        Wave 4: Observability (Grafana, Loki)
+        Wave 5: Data Services
+        Wave 6: Operations (Argo Rollouts)

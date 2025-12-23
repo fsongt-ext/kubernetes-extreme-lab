@@ -1,0 +1,72 @@
+##############################################################################
+# Demo App Helm Chart - Lab Environment Overrides
+##############################################################################
+
+# Reduce resources for lab constraints
+replicaCount: 1
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# Disable autoscaling for lab
+autoscaling:
+  enabled: false
+
+# Simplified Argo Rollouts for lab
+argoRollouts:
+  enabled: true
+  strategy: canary
+  canary:
+    maxSurge: 1
+    maxUnavailable: 0
+    steps:
+      - setWeight: 50
+      - pause: {duration: 30s}
+      - setWeight: 100
+  analysis:
+    enabled: false
+
+# Lab-specific host
+istio:
+  enabled: true
+  hosts:
+    - demo-app.lab.local
+
+# Simplified affinity for single node
+affinity: {}
+
+# Lab-specific environment
+env:
+  - name: APP_VERSION
+    value: "1.0.0-lab"
+  - name: ENVIRONMENT
+    value: "lab"
+  - name: LOG_LEVEL
+    value: "debug"
+  - name: POD_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
+  - name: POD_NAMESPACE
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+  - name: POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: "otel-collector.observability.svc.cluster.local:4317"
+  - name: OTEL_SERVICE_NAME
+    value: "demo-app"
+  - name: OTEL_RESOURCE_ATTRIBUTES
+    value: "service.namespace=$(POD_NAMESPACE),service.instance.id=$(POD_NAME),environment=lab"
+
+# Disable PDB for single replica
+podDisruptionBudget:
+  enabled: false

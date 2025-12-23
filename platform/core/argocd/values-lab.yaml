@@ -1,0 +1,65 @@
+##############################################################################
+# Argo CD Configuration - Lab Environment Overrides
+##############################################################################
+
+argo-cd:
+  global:
+    domain: argocd.lab.local
+
+  # Further reduce resources for lab constraints
+  controller:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 400m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+
+  server:
+    replicas: 1
+    autoscaling:
+      enabled: false
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    # Lab-specific configuration
+    extraArgs:
+      - --insecure
+      - --disable-auth  # For lab only!
+
+  repoServer:
+    replicas: 1
+    autoscaling:
+      enabled: false
+    resources:
+      limits:
+        cpu: 400m
+        memory: 512Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  redis:
+    resources:
+      limits:
+        cpu: 100m
+        memory: 64Mi
+      requests:
+        cpu: 50m
+        memory: 32Mi
+
+  applicationSet:
+    replicas: 1
+
+  # Lab-specific repository
+  configs:
+    repositories:
+      - url: https://github.com/yourusername/kubernetes-extreme-lab
+        type: git
+        name: lab-repo

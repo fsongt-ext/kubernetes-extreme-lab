@@ -1,0 +1,86 @@
+##############################################################################
+# Kyverno Configuration
+#
+# Application team policy enforcement
+##############################################################################
+
+kyverno:
+  # Replicas (single for lab)
+  replicaCount: 1
+
+  # Resource limits
+  resources:
+    limits:
+      cpu: 400m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  # Image pull policy
+  image:
+    pullPolicy: IfNotPresent
+
+  # Webhook configuration
+  webhooks:
+    timeoutSeconds: 10
+
+  # Background controller
+  backgroundController:
+    enabled: true
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  # Cleanup controller
+  cleanupController:
+    enabled: true
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 25m
+        memory: 32Mi
+
+  # Reports controller
+  reportsController:
+    enabled: true
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+  # Metrics
+  metricsService:
+    create: true
+    port: 8000
+
+  # Service Monitor for Prometheus
+  serviceMonitor:
+    enabled: true
+
+  # Exclude namespaces
+  excludeKyvernoNamespace: true
+
+  config:
+    # Exclude resources
+    resourceFilters:
+      - "[Event,*,*]"
+      - "[*,kube-system,*]"
+      - "[*,kube-public,*]"
+      - "[*,kube-node-lease,*]"
+      - "[Node,*,*]"
+      - "[APIService,*,*]"
+      - "[TokenReview,*,*]"
+      - "[SubjectAccessReview,*,*]"
+      - "[SelfSubjectAccessReview,*,*]"
+      - "[Binding,*,*]"
+      - "[Pod/*,*,*]"

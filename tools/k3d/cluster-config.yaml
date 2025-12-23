@@ -1,0 +1,108 @@
+---
+# K3d Cluster Configuration for Local Development
+# Simulates lab environment with minimal resources
+
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+
+metadata:
+  name: extreme-lab
+
+# Number of server nodes (control plane)
+servers: 1
+
+# Number of agent nodes (workers)
+agents: 2
+
+# Image to use for nodes
+image: rancher/k3s:v1.30.0-k3s1
+
+# Port mappings (host:container)
+ports:
+  - port: 8080:80     # HTTP
+    nodeFilters:
+      - loadbalancer
+  - port: 8443:443    # HTTPS
+    nodeFilters:
+      - loadbalancer
+  - port: 6443:6443   # Kubernetes API
+    nodeFilters:
+      - server:0
+
+# Volume mounts
+volumes:
+  # Mount local gitops directory for development
+  - volume: ./gitops:/gitops
+    nodeFilters:
+      - server:0
+      - agent:*
+
+# Registry configuration (optional local registry)
+registries:
+  create:
+    name: k3d-registry.localhost
+    host: "0.0.0.0"
+    hostPort: "5000"
+
+# K3s configuration options
+options:
+  k3d:
+    wait: true
+    timeout: "60s"
+    disableLoadbalancer: false
+    disableImageVolume: false
+
+  k3s:
+    extraArgs:
+      # Server (control plane) arguments
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:*
+      - arg: --disable=servicelb
+        nodeFilters:
+          - server:*
+      - arg: --disable=local-storage
+        nodeFilters:
+          - server:*
+      # Enable feature gates
+      - arg: --kube-apiserver-arg=feature-gates=EphemeralContainers=true
+        nodeFilters:
+          - server:*
+
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true
+
+# Runtime configuration
+runtime:
+  gpuRequest: ""
+  labels:
+    - label: environment=local
+      nodeFilters:
+        - server:*
+        - agent:*
+    - label: team=platform
+      nodeFilters:
+        - server:*
+
+# Resource limits for nodes (Docker containers)
+# Note: These are passed to Docker, not enforced by K3s
+# servers:
+#   resources:
+#     limits:
+#       cpu: "2"
+#       memory: "4Gi"
+# agents:
+#   resources:
+#     limits:
+#       cpu: "1"
+#       memory: "2Gi"
+
+# Environment variables
+env:
+  - envVar: K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml
+    nodeFilters:
+      - server:*
+  - envVar: K3S_KUBECONFIG_MODE=644
+    nodeFilters:
+      - server:*

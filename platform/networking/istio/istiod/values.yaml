@@ -1,0 +1,102 @@
+##############################################################################
+# Istio Control Plane (istiod) Configuration
+#
+# Optimized for lab environment with minimal resource footprint
+##############################################################################
+
+istiod:
+  # Pilot configuration
+  pilot:
+    # Single replica for lab
+    replicaCount: 1
+
+    # Resource limits (minimal for lab)
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    # Enable trace sampling (low for lab)
+    traceSampling: 1.0
+
+    # Environment variables
+    env:
+      # Enable debug logging for lab
+      PILOT_ENABLE_PROTOCOL_SNIFFING_FOR_OUTBOUND: "true"
+      PILOT_ENABLE_PROTOCOL_SNIFFING_FOR_INBOUND: "true"
+
+  # Global mesh configuration
+  meshConfig:
+    # Access logging
+    accessLogFile: /dev/stdout
+    accessLogEncoding: JSON
+
+    # Tracing configuration (OpenTelemetry)
+    defaultConfig:
+      tracing:
+        sampling: 100.0
+        zipkin:
+          address: otel-collector.observability.svc.cluster.local:9411
+
+    # Enable auto mTLS
+    enableAutoMtls: true
+
+    # Outbound traffic policy
+    outboundTrafficPolicy:
+      mode: ALLOW_ANY
+
+    # Default service discovery
+    discoverySelectors:
+      - matchLabels:
+          istio-injection: enabled
+
+  # Enable telemetry v2
+  telemetry:
+    enabled: true
+    v2:
+      enabled: true
+      prometheus:
+        enabled: true
+
+  # Global settings
+  global:
+    # Proxy configuration
+    proxy:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi
+
+      # Logging level
+      logLevel: warning
+
+      # Component log level
+      componentLogLevel: "misc:error"
+
+    # Proxy init resources
+    proxy_init:
+      resources:
+        limits:
+          cpu: 100m
+          memory: 50Mi
+        requests:
+          cpu: 10m
+          memory: 10Mi
+
+    # Multi-cluster disabled for lab
+    multiCluster:
+      enabled: false
+
+    # Network configuration
+    network: ""
+
+    # mTLS configuration
+    mtls:
+      enabled: true
+      auto: true

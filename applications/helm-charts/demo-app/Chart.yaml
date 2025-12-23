@@ -1,0 +1,26 @@
+apiVersion: v2
+name: demo-app
+description: Demo microservice showcasing platform capabilities
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - microservice
+  - demo
+  - observability
+  - service-mesh
+
+maintainers:
+  - name: Application Team
+    email: appteam@example.com
+
+home: https://github.com/yourusername/kubernetes-extreme-lab
+sources:
+  - https://github.com/yourusername/kubernetes-extreme-lab/tree/main/applications/demo-app
+
+annotations:
+  # Platform integrations
+  platform.kubernetes.io/istio-injection: "enabled"
+  platform.kubernetes.io/monitoring: "enabled"
+  platform.kubernetes.io/progressive-delivery: "argo-rollouts"

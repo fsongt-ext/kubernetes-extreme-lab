@@ -1,0 +1,44 @@
+---
+##############################################################################
+# Application Workloads - App of Apps
+#
+# Manages all application deployments (demo-app, etc.)
+##############################################################################
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: application-apps
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"  # Deploy after platform
+spec:
+  project: applications
+
+  source:
+    repoURL: https://github.com/yourusername/kubernetes-extreme-lab
+    targetRevision: main
+    path: gitops/environments/lab/applications
+    directory:
+      recurse: true
+      include: '*.yaml'
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
