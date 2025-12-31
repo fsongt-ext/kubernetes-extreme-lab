@@ -4,20 +4,10 @@
 # Manages Azure Virtual Machines with Public IP
 ##############################################################################
 
-terraform {
-  required_version = ">= 1.9.0"
-
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 3.0"
-    }
-  }
-}
-
 ##############################################################################
 # Public IP
 ##############################################################################
+
 
 resource "azurerm_public_ip" "main" {
   count = var.public_ip_enabled ? 1 : 0
@@ -99,6 +89,12 @@ resource "azurerm_linux_virtual_machine" "main" {
 
   # Disable password authentication (SSH key only)
   disable_password_authentication = true
+
+  # System Assigned Managed Identity for Key Vault access
+  identity {
+    type = "SystemAssigned"
+  }
+
   tags = merge(
     var.tags,
     {
@@ -106,3 +102,4 @@ resource "azurerm_linux_virtual_machine" "main" {
     }
   )
 }
+

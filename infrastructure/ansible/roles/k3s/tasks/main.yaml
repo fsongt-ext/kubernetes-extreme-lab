@@ -18,9 +18,9 @@
     state: directory
     mode: '0755'
 
-- name: Create K3s config file
-  ansible.builtin.template:
-    src: k3s-config.yaml.j2
+- name: Copy K3s config file from Terraform-generated config
+  ansible.builtin.copy:
+    src: ../templates/k3s-config.yaml
     dest: "{{ k3s_config_dir }}/config.yaml"
     mode: '0644'
   notify: restart k3s

@@ -38,3 +38,20 @@ terraform.rc
 
 # Ignore DS_Store files (macOS)
 .DS_Store
+
+# Kubeconfig files - NEVER commit cluster credentials!
+**/kubeconfig*.yaml
+**/kubeconfig*.yml
+kubeconfig.yaml
+kubeconfig.yml
+.kube/config
+
+# But keep the README
+!**/kubeconfig-README.md
+!kubeconfig-README.md
+
+# Dashboard tokens
+**/dashboard-token.txt
+dashboard-token.txt
+
+

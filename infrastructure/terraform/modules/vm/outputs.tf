@@ -31,3 +31,14 @@ output "admin_username" {
   description = "Admin username for SSH access"
   value       = var.admin_username
 }
+
+output "managed_identity_principal_id" {
+  description = "Principal ID of the VM's system assigned managed identity"
+  value       = azurerm_linux_virtual_machine.main.identity[0].principal_id
+}
+
+output "managed_identity_tenant_id" {
+  description = "Tenant ID of the VM's system assigned managed identity"
+  value       = azurerm_linux_virtual_machine.main.identity[0].tenant_id
+}
+

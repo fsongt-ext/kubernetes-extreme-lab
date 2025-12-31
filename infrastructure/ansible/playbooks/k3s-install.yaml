@@ -20,17 +20,16 @@
     - name: Display cluster information
       ansible.builtin.debug:
         msg:
-          - "Cluster Name: {{ cluster_name }}"
-          - "Environment: {{ k3s_environment }}"
           - "K3s Version: {{ k3s_version }}"
           - "Pod CIDR: {{ pod_cidr }}"
           - "Service CIDR: {{ service_cidr }}"
+          - "Cluster DNS: {{ cluster_dns }}"
 
     - name: Check system resources
       ansible.builtin.assert:
         that:
-          - ansible_memtotal_mb >= 7168  # At least 7GB RAM
-          - ansible_processor_vcpus >= 2
+          - ansible_facts['memtotal_mb'] >= 7168  # At least 7GB RAM
+          - ansible_facts['processor_vcpus'] >= 2
         fail_msg: "Insufficient system resources for K3s cluster"
         success_msg: "System resources adequate"
 
@@ -72,10 +71,10 @@
     - name: Setup kubeconfig for current user
       ansible.builtin.copy:
         src: /etc/rancher/k3s/k3s.yaml
-        dest: "{{ ansible_env.HOME }}/.kube/config"
+        dest: "{{ ansible_facts['env']['HOME'] }}/.kube/config"
         remote_src: true
-        owner: "{{ ansible_user_id }}"
-        group: "{{ ansible_user_gid }}"
+        owner: "{{ ansible_facts['user_id'] }}"
+        group: "{{ ansible_facts['user_gid'] }}"
         mode: '0600'
       when: ansible_connection != 'local'
 
@@ -83,10 +82,9 @@
       ansible.builtin.debug:
         msg:
           - "✓ K3s cluster installed successfully!"
-          - "Cluster: {{ cluster_name }}"
           - "Version: {{ k3s_version }}"
           - ""
           - "Next steps:"
-          - "1. export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
+          - "1. cd tools/scripts && ./fetch-kubeconfig.sh"
           - "2. kubectl get nodes"
-          - "3. kubectl get pods -A"
+

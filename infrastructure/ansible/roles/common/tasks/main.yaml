@@ -7,7 +7,7 @@
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
-  when: ansible_os_family == "Debian"
+  when: ansible_facts['os_family'] == "Debian"
 
 - name: Install common packages
   ansible.builtin.package:
@@ -25,12 +25,15 @@
       - jq
       - python3
       - python3-pip
+      - openjdk-21-jre-headless
+      - unzip
     state: present
+
 
 - name: Disable swap
   ansible.builtin.command: swapoff -a
   changed_when: false
-  when: ansible_swaptotal_mb > 0
+  when: ansible_facts['swaptotal_mb'] > 0
 
 - name: Remove swap from fstab
   ansible.builtin.lineinfile:
@@ -67,7 +70,7 @@
 
 - name: Create .kube directory
   ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/.kube"
+    path: "{{ ansible_facts['env']['HOME'] }}/.kube"
     state: directory
     mode: '0755'
 

@@ -1,0 +1,118 @@
+---
+##############################################################################
+# Keycloak Installation Tasks
+#
+# Installs and configures Keycloak as a systemd service
+##############################################################################
+
+- name: Install Azure CLI (for Key Vault access)
+  ansible.builtin.shell: |
+    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+  args:
+    creates: /usr/bin/az
+
+- name: Login to Azure using Managed Identity
+  ansible.builtin.command: az login --identity
+  changed_when: false
+
+- name: Fetch Keycloak admin username from Key Vault
+  ansible.builtin.command: >
+    az keyvault secret show
+    --vault-name {{ keyvault_name }}
+    --name KC-BOOTSTRAP-ADMIN-USERNAME
+    --query value
+    --output tsv
+  register: keycloak_admin_username_result
+  changed_when: false
+  no_log: true
+
+- name: Fetch Keycloak admin password from Key Vault
+  ansible.builtin.command: >
+    az keyvault secret show
+    --vault-name {{ keyvault_name }}
+    --name KC-BOOTSTRAP-ADMIN-PASSWORD
+    --query value
+    --output tsv
+  register: keycloak_admin_password_result
+  changed_when: false
+  no_log: true
+
+- name: Set Keycloak admin credentials facts
+  ansible.builtin.set_fact:
+    keycloak_admin_username: "{{ keycloak_admin_username_result.stdout }}"
+    keycloak_admin_password: "{{ keycloak_admin_password_result.stdout }}"
+  no_log: true
+
+- name: Create Keycloak user
+  ansible.builtin.user:
+    name: keycloak
+    system: true
+    shell: /bin/false
+    create_home: false
+
+- name: Create Keycloak directory
+  ansible.builtin.file:
+    path: /opt/keycloak
+    state: directory
+    owner: keycloak
+    group: keycloak
+    mode: '0755'
+
+- name: Check if Keycloak is already installed
+  ansible.builtin.stat:
+    path: /opt/keycloak/bin/kc.sh
+  register: keycloak_binary
+
+- name: Download Keycloak
+  ansible.builtin.get_url:
+    url: "{{ keycloak_download_url }}"
+    dest: /tmp/keycloak.tar.gz
+    mode: '0644'
+  when: not keycloak_binary.stat.exists
+
+- name: Extract Keycloak
+  ansible.builtin.unarchive:
+    src: /tmp/keycloak.tar.gz
+    dest: /opt/keycloak
+    remote_src: true
+    extra_opts: [--strip-components=1]
+    owner: keycloak
+    group: keycloak
+  when: not keycloak_binary.stat.exists
+
+- name: Clean up Keycloak archive
+  ansible.builtin.file:
+    path: /tmp/keycloak.tar.gz
+    state: absent
+  when: not keycloak_binary.stat.exists
+
+- name: Copy Keycloak systemd service from Terraform-generated config
+  ansible.builtin.copy:
+    src: ../templates/keycloak.service
+    dest: /etc/systemd/system/keycloak.service
+    mode: '0644'
+  notify: restart keycloak
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start Keycloak service
+  ansible.builtin.systemd:
+    name: keycloak
+    enabled: true
+    state: started
+
+- name: Wait for Keycloak to be ready
+  ansible.builtin.wait_for:
+    port: 8080
+    delay: 10
+    timeout: 300
+
+- name: Display Keycloak info
+  ansible.builtin.debug:
+    msg:
+      - "✓ Keycloak installed successfully!"
+      - "Access Keycloak at: http://{{ ansible_host }}:8080"
+      - "Admin username: {{ keycloak_admin_username }}"
+      - "Admin password: Stored in Azure Key Vault"

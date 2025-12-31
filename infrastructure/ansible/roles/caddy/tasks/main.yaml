@@ -1,0 +1,66 @@
+---
+##############################################################################
+# Caddy Reverse Proxy Role
+#
+# Installs Caddy and configures it as a reverse proxy with automatic HTTPS
+##############################################################################
+
+- name: Install dependencies
+  ansible.builtin.package:
+    name:
+      - debian-keyring
+      - debian-archive-keyring
+      - apt-transport-https
+      - curl
+    state: present
+
+- name: Add Caddy GPG key
+  ansible.builtin.shell: |
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  args:
+    creates: /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+
+- name: Add Caddy repository
+  ansible.builtin.shell: |
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+  args:
+    creates: /etc/apt/sources.list.d/caddy-stable.list
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Caddy
+  ansible.builtin.package:
+    name: caddy
+    state: present
+
+- name: Copy Caddyfile from Terraform-generated config
+  ansible.builtin.copy:
+    src: ../templates/Caddyfile
+    dest: /etc/caddy/Caddyfile
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart caddy
+
+- name: Enable and start Caddy service
+  ansible.builtin.systemd:
+    name: caddy
+    enabled: true
+    state: started
+
+- name: Wait for Caddy to be ready
+  ansible.builtin.wait_for:
+    port: 443
+    delay: 5
+    timeout: 60
+
+- name: Display Caddy info
+  ansible.builtin.debug:
+    msg:
+      - "✓ Caddy installed successfully!"
+      - "Automatic HTTPS enabled via Let's Encrypt"
+      - ""
+      - "Access your services at:"
+      - "  https://{{ caddy_domain }}"

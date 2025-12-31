@@ -30,3 +30,7 @@ enable_audit_logging=${enable_audit_logging}
 # Resource limits
 node_cpu_limit=${node_cpu_limit}
 node_memory_limit=${node_memory_limit}
+
+# Azure Key Vault settings
+keyvault_name=${keyvault_name}
+

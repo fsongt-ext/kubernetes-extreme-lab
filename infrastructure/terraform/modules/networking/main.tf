@@ -4,20 +4,10 @@
 # Manages VNet, Subnet, and Network Security Group
 ##############################################################################
 
-terraform {
-  required_version = ">= 1.9.0"
-
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 3.0"
-    }
-  }
-}
-
 ##############################################################################
 # Virtual Network
 ##############################################################################
+
 
 resource "azurerm_virtual_network" "main" {
   name                = "${var.cluster_name}-vnet"
@@ -88,6 +78,19 @@ resource "azurerm_network_security_group" "main" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "443"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  # Allow Kubernetes API Server
+  security_rule {
+    name                       = "AllowK8sAPI"
+    priority                   = 130
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "6443"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }

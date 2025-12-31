@@ -4,20 +4,10 @@
 # Manages K3s cluster configuration and setup
 ##############################################################################
 
-terraform {
-  required_version = ">= 1.9.0"
-
-  required_providers {
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.4"
-    }
-  }
-}
-
 ##############################################################################
 # Variables
 ##############################################################################
+
 
 variable "cluster_name" {
   description = "Name of the K3s cluster"

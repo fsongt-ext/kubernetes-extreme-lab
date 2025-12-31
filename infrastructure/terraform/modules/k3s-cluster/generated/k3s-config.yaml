@@ -1,0 +1,15 @@
+"cluster-cidr": "10.42.0.0/16"
+"cluster-dns": "10.43.0.10"
+"disable":
+- "traefik"
+- "servicelb"
+- "local-storage"
+"kube-apiserver-arg":
+- "audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log"
+- "audit-log-maxage=30"
+- "audit-log-maxbackup=10"
+- "audit-log-maxsize=100"
+"protect-kernel-defaults": true
+"secrets-encryption": true
+"service-cidr": "10.43.0.0/16"
+"write-kubeconfig-mode": "0644"
