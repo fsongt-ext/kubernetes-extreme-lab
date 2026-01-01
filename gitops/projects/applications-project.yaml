@@ -85,5 +85,6 @@ spec:
   # Orphaned resources monitoring
   orphanedResources:
     warn: true
-        - '*'
-      manualSync: true
+    ignore:
+      - '*'
+    manualSync: true
