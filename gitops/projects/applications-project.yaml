@@ -22,6 +22,8 @@ spec:
 
   # Destination clusters and namespaces
   destinations:
+    - namespace: 'argocd'
+      server: https://kubernetes.default.svc
     - namespace: 'demo'
       server: https://kubernetes.default.svc
     - namespace: 'dev'

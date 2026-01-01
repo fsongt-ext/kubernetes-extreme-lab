@@ -44,7 +44,7 @@ cert-manager:
   prometheus:
     enabled: true
     servicemonitor:
-      enabled: true
+      enabled: false  # Disabled until Prometheus Operator is installed
       prometheusInstance: default
 
   # Startup API check

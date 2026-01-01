@@ -46,12 +46,6 @@ kubeconfig.yaml
 kubeconfig.yml
 .kube/config
 
-# But keep the README
-!**/kubeconfig-README.md
-!kubeconfig-README.md
-
-# Dashboard tokens
-**/dashboard-token.txt
-dashboard-token.txt
+.local
 
 
