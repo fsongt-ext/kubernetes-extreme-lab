@@ -41,6 +41,7 @@ locals {
       "local-storage" # Using custom storage provisioner
     ]
     write-kubeconfig-mode = "0644"
+    flannel-backend       = "none" # Disabled - using Cilium instead
   }
 
   # Keycloak configuration
