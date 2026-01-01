@@ -70,8 +70,8 @@ grafana:
             path: /var/lib/grafana/dashboards/default
 
   # Pre-loaded dashboards (via ConfigMaps)
-  dashboardsConfigMaps:
-    default: grafana-dashboards
+  # dashboardsConfigMaps:
+  #   default: grafana-dashboards
 
   # Service configuration
   service:
