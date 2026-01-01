@@ -28,8 +28,8 @@ kong:
     # Logging
     log_level: "notice"
 
-    # Plugins
-    plugins: "bundled,oidc"
+    # Plugins (oidc requires separate installation)
+    plugins: "bundled"
 
   # Resource limits for lab
   resources:
