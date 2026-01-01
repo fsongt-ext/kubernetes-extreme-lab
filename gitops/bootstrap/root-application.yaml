@@ -20,7 +20,7 @@ spec:
 
   source:
     repoURL: git@github.com:TrungHQ-02/kubernetes-extreme-lab.git
-    targetRevision: main
+    targetRevision: feat/argocd
     path: gitops/bootstrap
     directory:
       recurse: false
