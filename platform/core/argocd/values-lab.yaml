@@ -6,16 +6,16 @@ argo-cd:
   global:
     domain: argocd.lab.local
 
-  # Further reduce resources for lab constraints
+  # Adjusted resources for lab environment with multiple applications
   controller:
     replicas: 1
     resources:
       limits:
-        cpu: 400m
-        memory: 512Mi
+        cpu: 500m
+        memory: 1Gi  # Increased from 512Mi to handle multiple applications
       requests:
         cpu: 200m
-        memory: 256Mi
+        memory: 512Mi  # Increased from 256Mi for stability
 
   server:
     replicas: 1
@@ -40,10 +40,10 @@ argo-cd:
     resources:
       limits:
         cpu: 400m
-        memory: 512Mi
+        memory: 768Mi  # Increased from 512Mi for multiple repos
       requests:
         cpu: 50m
-        memory: 64Mi
+        memory: 128Mi  # Increased from 64Mi
 
   redis:
     resources:
@@ -60,6 +60,6 @@ argo-cd:
   # Lab-specific repository
   configs:
     repositories:
-      - url: https://github.com/yourusername/kubernetes-extreme-lab
+      - url: 'https://github.com/TrungHQ-02/kubernetes-extreme-lab.git'
         type: git
         name: lab-repo

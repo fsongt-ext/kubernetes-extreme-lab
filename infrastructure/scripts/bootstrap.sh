@@ -206,10 +206,11 @@ install_argocd() {
     cd "${PROJECT_ROOT}/platform/core/argocd"
     helm dependency update
 
-    # Install ArgoCD using custom chart
+    # Install ArgoCD using custom chart with lab-specific values
     helm upgrade --install argocd . \
         --namespace argocd \
         --create-namespace \
+        --values values-lab.yaml \
         --wait \
         --timeout 10m
 
