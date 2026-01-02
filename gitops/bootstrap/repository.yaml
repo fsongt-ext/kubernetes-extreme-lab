@@ -22,7 +22,3 @@ stringData:
   url: git@github.com:fsongt-ext/kubernetes-extreme-lab.git
   sshPrivateKey: |
     # Replace by the kubernetes-extreme-lab/infrastructure/scripts/bootstrap.sh script
-    # Example:
-    # -----BEGIN OPENSSH PRIVATE KEY-----
-    # b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAA...
-    # -----END OPENSSH PRIVATE KEY-----
