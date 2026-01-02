@@ -2,6 +2,11 @@ provider "azurerm" {
   features {}
 }
 
+provider "github" {
+  owner = local.github.organization
+}
+
+
 terraform {
   required_version = ">= 1.9.0"
 
@@ -17,6 +22,10 @@ terraform {
     null = {
       source  = "hashicorp/null"
       version = "~> 3.2"
+    }
+    github = {
+      source  = "hashicorp/github"
+      version = "~> 6.0"
     }
   }
 
