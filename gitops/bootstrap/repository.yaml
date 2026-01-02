@@ -19,7 +19,7 @@ metadata:
     argocd.argoproj.io/secret-type: repository
 stringData:
   type: git
-  url: git@github.com:TrungHQ-02/kubernetes-extreme-lab.git
+  url: git@github.com:fsongt-ext/kubernetes-extreme-lab.git
   sshPrivateKey: |
     # Replace by the kubernetes-extreme-lab/infrastructure/scripts/bootstrap.sh script
     # Example:

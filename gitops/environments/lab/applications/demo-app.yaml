@@ -14,7 +14,7 @@ spec:
   project: applications
 
   source:
-    repoURL: git@github.com:TrungHQ-02/kubernetes-extreme-lab.git
+    repoURL: git@github.com:fsongt-ext/kubernetes-extreme-lab.git
     targetRevision: main
     path: applications/helm-charts/demo-app
     helm:

@@ -17,7 +17,7 @@ spec:
 
   # Source repositories allowed
   sourceRepos:
-    - 'git@github.com:TrungHQ-02/kubernetes-extreme-lab.git'
+    - 'git@github.com:fsongt-ext/kubernetes-extreme-lab.git'
     - 'https://charts.jetstack.io'
     - 'https://istio-release.storage.googleapis.com/charts'
     - 'https://charts.konghq.com'

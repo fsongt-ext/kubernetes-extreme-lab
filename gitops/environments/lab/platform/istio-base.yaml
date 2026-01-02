@@ -12,7 +12,7 @@ spec:
   project: platform
 
   source:
-    repoURL: git@github.com:TrungHQ-02/kubernetes-extreme-lab.git
+    repoURL: git@github.com:fsongt-ext/kubernetes-extreme-lab.git
     targetRevision: feat/argocd
     path: platform/networking/istio/base
 
