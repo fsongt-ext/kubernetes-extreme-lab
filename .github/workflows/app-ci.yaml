@@ -11,7 +11,6 @@ on:
       - 'applications/**'
 
 env:
-  REGISTRY: docker.io
   IMAGE_NAME: ${{ github.repository }}/demo-app
 
 jobs:
@@ -71,26 +70,26 @@ jobs:
           context: ./applications/demo-app
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: 'sarif'
           output: 'trivy-image-results.sarif'
 
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image: ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: spdx-json
           output-file: sbom.spdx.json
 
       - name: Sign image with Cosign
         run: |
-          cosign sign --yes ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cosign sign --yes ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         env:
           COSIGN_EXPERIMENTAL: 1
 
@@ -148,7 +147,7 @@ jobs:
       - name: Update image tag
         run: |
           cd gitops
-          sed -i "s|image:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|g" \
+          sed -i "s|image:.*|image: ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|g" \
             gitops/environments/dev/applications/demo-app.yaml
 
       - name: Commit and push

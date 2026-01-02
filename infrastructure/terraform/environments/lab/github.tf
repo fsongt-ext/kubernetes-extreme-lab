@@ -5,8 +5,7 @@ locals {
       "kubernetes-extreme-lab" = {
         global = {
           variables = {
-            REGISTRY   = module.acr.login_server
-            IMAGE_NAME = "kubernetes-extreme-lab/demo-app"
+            REGISTRY = module.acr.login_server
           }
 
           secrets = {
