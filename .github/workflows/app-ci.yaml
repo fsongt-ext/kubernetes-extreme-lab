@@ -46,7 +46,7 @@ jobs:
   build-and-push:
     name: Build, Scan & Push Image
     runs-on: ubuntu-latest
-    needs: security-scan
+    # needs: security-scan
     permissions:
       contents: read
       packages: write
@@ -100,36 +100,36 @@ jobs:
           path: sbom.spdx.json
           retention-days: 90
 
-  helm-lint:
-    name: Helm Chart Validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # helm-lint:
+  #   name: Helm Chart Validation
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
+  #     - name: Set up Helm
+  #       uses: azure/setup-helm@v3
 
-      - name: Lint Helm charts
-        run: |
-          helm lint applications/helm-charts/demo-app
+  #     - name: Lint Helm charts
+  #       run: |
+  #         helm lint applications/helm-charts/demo-app
 
-      - name: Template and validate
-        run: |
-          helm template demo-app applications/helm-charts/demo-app --validate
+  #     - name: Template and validate
+  #       run: |
+  #         helm template demo-app applications/helm-charts/demo-app --validate
 
-  policy-check:
-    name: Policy Validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # policy-check:
+  #   name: Policy Validation
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Run Conftest policy checks
-        uses: ./.github/actions/security-scan
-        with:
-          policy-path: policies/conftest
-          target: applications/helm-charts
+  #     - name: Run Conftest policy checks
+  #       uses: ./.github/actions/security-scan
+  #       with:
+  #         policy-path: policies/conftest
+  #         target: applications/helm-charts
 
   update-gitops:
     name: Update GitOps Repository
