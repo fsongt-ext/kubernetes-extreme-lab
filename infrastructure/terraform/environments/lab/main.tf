@@ -28,6 +28,35 @@ module "network" {
   depends_on = [azurerm_resource_group.main]
 }
 
+##############################################################################
+# Azure Container Registry Module
+##############################################################################
+
+module "acr" {
+  source = "../../modules/acr"
+
+  acr_name            = local.acr_config.name
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+
+  # Public registry configuration
+  sku                           = "Basic"
+  admin_enabled                 = true # Enable for easier K3s integration
+  public_network_access_enabled = true
+  anonymous_pull_enabled        = true # Makes it public
+
+  tags       = local.common_tags
+  depends_on = [azurerm_resource_group.main]
+}
+
+resource "azurerm_role_assignment" "vm_acr_pull" {
+  scope                = module.acr.acr_id
+  role_definition_name = "AcrPull"
+  principal_id         = module.vm.managed_identity_principal_id
+
+  depends_on = [module.acr, module.vm]
+}
+
 #############################################################################
 # VM Module - K3s Master Node
 #############################################################################
