@@ -43,6 +43,10 @@ locals {
     write-kubeconfig-mode = "0644"
   }
 
+  acr_config = {
+    name = "k3slabacr${random_integer.suffix.result}"
+  }
+
   # Keycloak configuration
   keycloak_version = "26.0.7"
 
@@ -65,6 +69,15 @@ locals {
         }
         "KC-BOOTSTRAP-ADMIN-PASSWORD" = {
           value = random_password.keycloak_admin.result
+        }
+        "ACR-LOGIN-SERVER" = {
+          value = module.acr.login_server
+        }
+        "ACR-ADMIN-USERNAME" = {
+          value = module.acr.admin_username
+        }
+        "ACR-ADMIN-PASSWORD" = {
+          value = module.acr.admin_password
         }
       }
     }
