@@ -87,18 +87,18 @@ jobs:
           format: spdx-json
           output-file: sbom.spdx.json
 
-      - name: Sign image with Cosign
-        run: |
-          cosign sign --yes ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        env:
-          COSIGN_EXPERIMENTAL: 1
+      # - name: Sign image with Cosign
+      #   run: |
+      #     cosign sign --yes ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      #   env:
+      #     COSIGN_EXPERIMENTAL: 1
 
-      - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: sbom.spdx.json
-          retention-days: 90
+      # - name: Upload SBOM artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: sbom
+      #     path: sbom.spdx.json
+      #     retention-days: 90
 
   # helm-lint:
   #   name: Helm Chart Validation
