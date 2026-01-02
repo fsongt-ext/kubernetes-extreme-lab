@@ -44,3 +44,11 @@ kubelet-arg:
 
 # Flannel Backend
 flannel-backend: none
+
+# Disable components (using our own)
+disable-cloud-controller: true
+disable-network-policy: false
+
+# TLS SANs - Add public IP for external access
+tls-san:
+  - "4.194.42.115"

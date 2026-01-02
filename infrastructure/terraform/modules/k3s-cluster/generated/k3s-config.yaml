@@ -3,7 +3,6 @@
 "disable":
 - "traefik"
 - "servicelb"
-- "local-storage"
 "kube-apiserver-arg":
 - "audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log"
 - "audit-log-maxage=30"

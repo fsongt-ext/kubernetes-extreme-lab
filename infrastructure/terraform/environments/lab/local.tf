@@ -36,9 +36,8 @@ locals {
   k3s_version = "v1.30.0+k3s1"
   k3s_config = {
     disable = [
-      "traefik",      # Using Kong instead
-      "servicelb",    # Using MetalLB
-      "local-storage" # Using custom storage provisioner
+      "traefik",  # Using Kong instead
+      "servicelb" # Using MetalLB
     ]
     write-kubeconfig-mode = "0644"
     flannel-backend       = "none" # Disabled - using Cilium instead
