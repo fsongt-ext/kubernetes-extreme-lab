@@ -12,6 +12,7 @@ spec:
   # Source repositories allowed
   sourceRepos:
     - 'git@github.com:fsongt-ext/kubernetes-extreme-lab.git'
+    - 'https://github.com/fsongt-ext/*'  # Allow org repos
     - 'https://github.com/TrungHQ-02/*'  # Allow team repos
 
   # Destination clusters and namespaces
