@@ -105,7 +105,7 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Starting server on %s", srv.Addr)
+		log.Printf("starting server on %s", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed: %v", err)
 		}

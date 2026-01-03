@@ -18,8 +18,8 @@ spec:
   project: platform
 
   source:
-    repoURL: git@github.com:TrungHQ-02/kubernetes-extreme-lab.git
-    targetRevision: feat/argocd
+    repoURL: git@github.com:fsongt-ext/kubernetes-extreme-lab.git
+    targetRevision: main
     path: gitops/environments/lab/platform
     directory:
       recurse: true

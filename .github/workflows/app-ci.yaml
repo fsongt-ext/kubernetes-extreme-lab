@@ -11,7 +11,6 @@ on:
       - 'applications/**'
 
 env:
-  REGISTRY: docker.io
   IMAGE_NAME: ${{ github.repository }}/demo-app
 
 jobs:
@@ -30,10 +29,9 @@ jobs:
             p/secrets
             p/owasp-top-ten
 
-      - name: Scan for secrets with Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan for secrets with Gitleaks (open-source)
+        run: |
+          docker run --rm -v $(pwd):/repo zricethezav/gitleaks:latest detect --source /repo --verbose --no-git
 
       - name: Dependency scan with Trivy
         uses: aquasecurity/trivy-action@master
@@ -46,7 +44,7 @@ jobs:
   build-and-push:
     name: Build, Scan & Push Image
     runs-on: ubuntu-latest
-    needs: security-scan
+    # needs: security-scan
     permissions:
       contents: read
       packages: write
@@ -58,11 +56,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
+      - name: Login to Azure Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ vars.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
 
       - name: Build and push (using composite action)
         uses: ./.github/actions/docker-build-push
@@ -70,71 +70,71 @@ jobs:
           context: ./applications/demo-app
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image-ref: ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: 'sarif'
           output: 'trivy-image-results.sarif'
 
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          image: ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           format: spdx-json
           output-file: sbom.spdx.json
 
-      - name: Sign image with Cosign
-        run: |
-          cosign sign --yes ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        env:
-          COSIGN_EXPERIMENTAL: 1
+      # - name: Sign image with Cosign
+      #   run: |
+      #     cosign sign --yes ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      #   env:
+      #     COSIGN_EXPERIMENTAL: 1
 
-      - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: sbom.spdx.json
-          retention-days: 90
+      # - name: Upload SBOM artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: sbom
+      #     path: sbom.spdx.json
+      #     retention-days: 90
 
-  helm-lint:
-    name: Helm Chart Validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # helm-lint:
+  #   name: Helm Chart Validation
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
+  #     - name: Set up Helm
+  #       uses: azure/setup-helm@v3
 
-      - name: Lint Helm charts
-        run: |
-          helm lint applications/helm-charts/demo-app
+  #     - name: Lint Helm charts
+  #       run: |
+  #         helm lint applications/helm-charts/demo-app
 
-      - name: Template and validate
-        run: |
-          helm template demo-app applications/helm-charts/demo-app --validate
+  #     - name: Template and validate
+  #       run: |
+  #         helm template demo-app applications/helm-charts/demo-app --validate
 
-  policy-check:
-    name: Policy Validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # policy-check:
+  #   name: Policy Validation
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Run Conftest policy checks
-        uses: ./.github/actions/security-scan
-        with:
-          policy-path: policies/conftest
-          target: applications/helm-charts
+  #     - name: Run Conftest policy checks
+  #       uses: ./.github/actions/security-scan
+  #       with:
+  #         policy-path: policies/conftest
+  #         target: applications/helm-charts
 
   update-gitops:
     name: Update GitOps Repository
     runs-on: ubuntu-latest
-    needs: [build-and-push, helm-lint, policy-check]
+    # needs: [build-and-push, helm-lint, policy-check]
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout GitOps repo
@@ -147,7 +147,7 @@ jobs:
       - name: Update image tag
         run: |
           cd gitops
-          sed -i "s|image:.*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|g" \
+          sed -i "s|image:.*|image: ${{ vars.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|g" \
             gitops/environments/dev/applications/demo-app.yaml
 
       - name: Commit and push

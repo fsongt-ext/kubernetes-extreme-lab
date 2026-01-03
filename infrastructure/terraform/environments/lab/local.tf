@@ -36,11 +36,20 @@ locals {
   k3s_version = "v1.30.0+k3s1"
   k3s_config = {
     disable = [
+<<<<<<< HEAD
       "traefik",  # Using Kong instead
       "servicelb" # Using MetalLB
+=======
+      "traefik",   # Using Kong instead
+      "servicelb", # Using MetalLB
+>>>>>>> 2d6531dd034464ebeb4e3a6dc93a12cc4aa1635d
     ]
     write-kubeconfig-mode = "0644"
     flannel-backend       = "none" # Disabled - using Cilium instead
+  }
+
+  acr_config = {
+    name = "k3slabacr${random_integer.suffix.result}"
   }
 
   # Keycloak configuration
@@ -65,6 +74,15 @@ locals {
         }
         "KC-BOOTSTRAP-ADMIN-PASSWORD" = {
           value = random_password.keycloak_admin.result
+        }
+        "ACR-LOGIN-SERVER" = {
+          value = module.acr.login_server
+        }
+        "ACR-ADMIN-USERNAME" = {
+          value = module.acr.admin_username
+        }
+        "ACR-ADMIN-PASSWORD" = {
+          value = module.acr.admin_password
         }
       }
     }
