@@ -82,10 +82,3 @@ spec:
       kind: Role
     - group: 'rbac.authorization.k8s.io'
       kind: RoleBinding
-
-  # Orphaned resources monitoring
-  orphanedResources:
-    warn: true
-    ignore:
-      - '*'
-    manualSync: true
