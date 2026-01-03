@@ -104,7 +104,7 @@ argo-cd:
     # Repository credentials
     repositories:
       # Add your Git repositories here
-      # - url: git@github.com:TrungHQ-02/kubernetes-extreme-lab
+      # - url: git@github.com:fsongt-ext/kubernetes-extreme-lab
       #   type: git
 
     # Resource customizations

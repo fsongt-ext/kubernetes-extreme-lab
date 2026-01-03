@@ -184,7 +184,7 @@ install_argocd() {
     log_info "Creating GitHub repository SSH secret..."
     kubectl create secret generic github-repo-ssh \
         --from-file=sshPrivateKey="$ARGOCD_SSH_KEY" \
-        --from-literal=url=git@github.com:TrungHQ-02/kubernetes-extreme-lab.git \
+        --from-literal=url=git@github.com:fsongt-ext/kubernetes-extreme-lab.git \
         --from-literal=type=git \
         -n argocd \
         --dry-run=client -o yaml | kubectl apply -f -
