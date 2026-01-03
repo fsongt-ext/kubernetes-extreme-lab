@@ -15,9 +15,6 @@ kong:
     # Database-less mode (no PostgreSQL required)
     database: "off"
 
-    # Declarative configuration
-    declarative_config: /kong_dbless/kong.yml
-
     # Admin API
     admin_listen: "0.0.0.0:8001, 0.0.0.0:8444 ssl"
     admin_gui_listen: "0.0.0.0:8002, 0.0.0.0:8445 ssl"
