@@ -1,0 +1,400 @@
+name: Helm Chart Release Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'helm/**'
+      - '.github/workflows/helm-release.yaml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'helm/**'
+  workflow_dispatch:
+    inputs:
+      chart:
+        description: 'Specific chart to release (leave empty for all)'
+        required: false
+        type: string
+      force_version:
+        description: 'Force specific version (e.g., 1.0.0)'
+        required: false
+        type: string
+
+env:
+  HELM_VERSION: '3.14.0'
+  CHARTS_DIR: 'helm'
+
+jobs:
+  detect-changes:
+    name: Detect Changed Charts
+    runs-on: ubuntu-latest
+    outputs:
+      charts: ${{ steps.changed.outputs.charts }}
+      matrix: ${{ steps.changed.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed charts
+        id: changed
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] && [[ -n "${{ inputs.chart }}" ]]; then
+            # Manual trigger with specific chart
+            CHARTS='["${{ inputs.chart }}"]'
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual trigger - all charts
+            CHARTS=$(ls -d ${CHARTS_DIR}/*/ | xargs -n1 basename | jq -R -s -c 'split("\n")[:-1]')
+          else
+            # Auto trigger - detect changes
+            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              BASE_REF="origin/${{ github.base_ref }}"
+            else
+              BASE_REF="HEAD^"
+            fi
+
+            CHANGED_FILES=$(git diff --name-only ${BASE_REF} HEAD)
+            CHANGED_CHARTS=$(echo "$CHANGED_FILES" | grep "^${CHARTS_DIR}/" | cut -d/ -f2 | sort -u | jq -R -s -c 'split("\n")[:-1] | select(length > 0)')
+
+            if [[ -z "$CHANGED_CHARTS" ]] || [[ "$CHANGED_CHARTS" == "[]" ]]; then
+              echo "No chart changes detected"
+              CHARTS="[]"
+            else
+              CHARTS="$CHANGED_CHARTS"
+            fi
+          fi
+
+          echo "charts=${CHARTS}" >> $GITHUB_OUTPUT
+          echo "matrix={\"chart\":${CHARTS}}" >> $GITHUB_OUTPUT
+          echo "Detected charts: ${CHARTS}"
+
+  lint-and-test:
+    name: Lint & Test
+    needs: detect-changes
+    if: needs.detect-changes.outputs.charts != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install chart-testing
+        uses: helm/chart-testing-action@v2.6.1
+
+      - name: Lint Helm chart
+        run: |
+          helm lint ${CHARTS_DIR}/${{ matrix.chart }}
+
+      - name: Template and validate chart
+        run: |
+          helm template test-release ${CHARTS_DIR}/${{ matrix.chart }} \
+            --values ${CHARTS_DIR}/${{ matrix.chart }}/values.yaml \
+            --validate
+
+      - name: Run chart-testing (lint)
+        run: |
+          ct lint --charts ${CHARTS_DIR}/${{ matrix.chart }} \
+            --chart-dirs ${CHARTS_DIR} \
+            --validate-maintainers=false
+
+      - name: Check for required fields
+        run: |
+          CHART_YAML="${CHARTS_DIR}/${{ matrix.chart }}/Chart.yaml"
+
+          # Verify required fields exist
+          for field in name version description; do
+            if ! grep -q "^${field}:" "$CHART_YAML"; then
+              echo "ERROR: Missing required field '${field}' in Chart.yaml"
+              exit 1
+            fi
+          done
+
+          echo "✅ All required Chart.yaml fields present"
+
+      - name: Validate values schema (if exists)
+        run: |
+          if [[ -f "${CHARTS_DIR}/${{ matrix.chart }}/values.schema.json" ]]; then
+            echo "Validating values against JSON schema..."
+            helm plugin install https://github.com/losisin/helm-values-schema-json || true
+            helm schema -input ${CHARTS_DIR}/${{ matrix.chart }}/values.yaml \
+              -schema ${CHARTS_DIR}/${{ matrix.chart }}/values.schema.json
+          else
+            echo "No values.schema.json found, skipping schema validation"
+          fi
+
+  security-scan:
+    name: Security Scan
+    needs: detect-changes
+    if: needs.detect-changes.outputs.charts != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '${{ env.CHARTS_DIR }}/${{ matrix.chart }}'
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.chart }}.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Scan rendered manifests with Kubesec
+        run: |
+          # Template the chart
+          helm template test-release ${CHARTS_DIR}/${{ matrix.chart }} > /tmp/manifest.yaml
+
+          # Install kubesec
+          wget https://github.com/controlplaneio/kubesec/releases/download/v2.13.0/kubesec_linux_amd64.tar.gz
+          tar -xzf kubesec_linux_amd64.tar.gz
+
+          # Scan
+          ./kubesec scan /tmp/manifest.yaml
+
+  package-and-release:
+    name: Package & Release
+    needs: [detect-changes, lint-and-test, security-scan]
+    if: |
+      github.event_name != 'pull_request' &&
+      needs.detect-changes.outputs.charts != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Install Helm plugins
+        run: |
+          helm plugin install https://github.com/chartmuseum/helm-push || true
+          helm plugin install https://github.com/helm/helm-2to3 || true
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Determine version
+        id: version
+        run: |
+          CHART_PATH="${CHARTS_DIR}/${{ matrix.chart }}"
+
+          if [[ -n "${{ inputs.force_version }}" ]]; then
+            VERSION="${{ inputs.force_version }}"
+            echo "Using forced version: ${VERSION}"
+          else
+            # Extract current version from Chart.yaml
+            CURRENT_VERSION=$(grep '^version:' ${CHART_PATH}/Chart.yaml | awk '{print $2}')
+
+            # Check if this version already exists in storage
+            # For now, we'll bump patch version automatically
+            VERSION=$(echo ${CURRENT_VERSION} | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+
+            echo "Current version: ${CURRENT_VERSION}"
+            echo "New version: ${VERSION}"
+          fi
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "chart_name=${{ matrix.chart }}" >> $GITHUB_OUTPUT
+
+      - name: Update Chart.yaml version
+        run: |
+          CHART_PATH="${CHARTS_DIR}/${{ matrix.chart }}"
+          sed -i "s/^version:.*/version: ${{ steps.version.outputs.version }}/" ${CHART_PATH}/Chart.yaml
+
+          # Also update appVersion to match if it's the same application
+          if grep -q "^appVersion:" ${CHART_PATH}/Chart.yaml; then
+            sed -i "s/^appVersion:.*/appVersion: \"${{ steps.version.outputs.version }}\"/" ${CHART_PATH}/Chart.yaml
+          fi
+
+      - name: Package Helm chart
+        id: package
+        run: |
+          CHART_PATH="${CHARTS_DIR}/${{ matrix.chart }}"
+
+          # Create package directory
+          mkdir -p .helm-packages
+
+          # Package the chart
+          helm package ${CHART_PATH} --destination .helm-packages
+
+          # Get the package name
+          PACKAGE_NAME=$(ls .helm-packages/${{ matrix.chart }}-*.tgz)
+          echo "package_name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "package_file=$(basename ${PACKAGE_NAME})" >> $GITHUB_OUTPUT
+
+          echo "📦 Packaged: ${PACKAGE_NAME}"
+
+      - name: Generate chart metadata
+        run: |
+          PACKAGE_FILE="${{ steps.package.outputs.package_file }}"
+
+          cat > .helm-packages/${{ matrix.chart }}-metadata.json <<EOF
+          {
+            "chart": "${{ matrix.chart }}",
+            "version": "${{ steps.version.outputs.version }}",
+            "package": "${PACKAGE_FILE}",
+            "commit": "${{ github.sha }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "repository": "${{ github.repository }}"
+          }
+          EOF
+
+      - name: Upload to Azure Blob Storage
+        env:
+          AZURE_STORAGE_ACCOUNT: ${{ vars.HELM_STORAGE_ACCOUNT }}
+          AZURE_STORAGE_KEY: ${{ secrets.HELM_STORAGE_KEY }}
+          AZURE_STORAGE_CONTAINER: ${{ vars.HELM_STORAGE_CONTAINER }}
+        run: |
+          # Install Azure CLI if not present
+          if ! command -v az &> /dev/null; then
+            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          fi
+
+          PACKAGE_FILE="${{ steps.package.outputs.package_file }}"
+
+          # Upload chart package
+          az storage blob upload \
+            --account-name ${AZURE_STORAGE_ACCOUNT} \
+            --account-key ${AZURE_STORAGE_KEY} \
+            --container-name ${AZURE_STORAGE_CONTAINER} \
+            --name "charts/${PACKAGE_FILE}" \
+            --file ".helm-packages/${PACKAGE_FILE}" \
+            --overwrite
+
+          # Upload metadata
+          az storage blob upload \
+            --account-name ${AZURE_STORAGE_ACCOUNT} \
+            --account-key ${AZURE_STORAGE_KEY} \
+            --container-name ${AZURE_STORAGE_CONTAINER} \
+            --name "charts/${{ matrix.chart }}-metadata.json" \
+            --file ".helm-packages/${{ matrix.chart }}-metadata.json" \
+            --overwrite
+
+          echo "✅ Uploaded to Azure Blob Storage"
+
+      - name: Update Helm repository index
+        env:
+          AZURE_STORAGE_ACCOUNT: ${{ vars.HELM_STORAGE_ACCOUNT }}
+          AZURE_STORAGE_KEY: ${{ secrets.HELM_STORAGE_KEY }}
+          AZURE_STORAGE_CONTAINER: ${{ vars.HELM_STORAGE_CONTAINER }}
+          HELM_REPO_URL: ${{ vars.HELM_REPO_URL }}
+        run: |
+          # Download existing index (if exists)
+          az storage blob download \
+            --account-name ${AZURE_STORAGE_ACCOUNT} \
+            --account-key ${AZURE_STORAGE_KEY} \
+            --container-name ${AZURE_STORAGE_CONTAINER} \
+            --name "index.yaml" \
+            --file "index.yaml" 2>/dev/null || echo "apiVersion: v1\nentries: {}" > index.yaml
+
+          # Update/generate index
+          helm repo index .helm-packages \
+            --url ${HELM_REPO_URL}/charts \
+            --merge index.yaml
+
+          # Upload updated index
+          az storage blob upload \
+            --account-name ${AZURE_STORAGE_ACCOUNT} \
+            --account-key ${AZURE_STORAGE_KEY} \
+            --container-name ${AZURE_STORAGE_CONTAINER} \
+            --name "index.yaml" \
+            --file ".helm-packages/index.yaml" \
+            --overwrite \
+            --content-type "text/yaml"
+
+          echo "✅ Updated Helm repository index"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ matrix.chart }}-v${{ steps.version.outputs.version }}
+          name: ${{ matrix.chart }} v${{ steps.version.outputs.version }}
+          body: |
+            ## Helm Chart Release: ${{ matrix.chart }}
+
+            **Version:** ${{ steps.version.outputs.version }}
+            **Commit:** ${{ github.sha }}
+
+            ### Installation
+
+            ```bash
+            # Add Helm repository
+            helm repo add kubernetes-extreme-lab ${{ vars.HELM_REPO_URL }}
+            helm repo update
+
+            # Install chart
+            helm install my-release kubernetes-extreme-lab/${{ matrix.chart }} --version ${{ steps.version.outputs.version }}
+            ```
+
+            ### Changes
+
+            See commit history for detailed changes.
+          files: |
+            ${{ steps.package.outputs.package_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate SBOM for Helm chart
+        run: |
+          # Install syft if not present
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+          # Generate SBOM
+          syft packages dir:${CHARTS_DIR}/${{ matrix.chart }} \
+            -o spdx-json \
+            > ${{ matrix.chart }}-sbom.spdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.chart }}-sbom
+          path: ${{ matrix.chart }}-sbom.spdx.json
+          retention-days: 90
+
+  notify:
+    name: Notify
+    needs: [package-and-release]
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send notification
+        run: |
+          echo "🚀 Helm charts released successfully"
+          # Add Slack/Teams/Discord notification here if needed

@@ -2,26 +2,29 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: istiod
+  name: microservices-demo
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "3"  # After istio-base
+    argocd.argoproj.io/sync-wave: "11"  # After demo-app
+    notifications.argoproj.io/subscribe.on-deployed.slack: "platform-deployments"
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: "platform-alerts"
 spec:
-  project: platform
+  project: applications
 
   source:
     repoURL: git@github.com:fsongt-ext/kubernetes-extreme-lab.git
     targetRevision: main
-    path: platform/networking/istio/istiod
+    path: helm/microservices-demo
     helm:
       valueFiles:
         - values.yaml
+        - values-lab.yaml  # Lab environment overrides
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: istio-system
+    namespace: boutique
 
   syncPolicy:
     automated:
@@ -36,7 +39,11 @@ spec:
         factor: 2
         maxDuration: 3m
 
-  # Wait for istio-base CRDs
+  # Health assessment
   info:
-    - name: 'Dependencies'
-      value: 'Requires istio-base to be synced first'
+    - name: 'Application'
+      value: 'Online Boutique - Microservices Demo'
+    - name: 'Environment'
+      value: 'lab'
+    - name: 'Services'
+      value: '11 microservices'

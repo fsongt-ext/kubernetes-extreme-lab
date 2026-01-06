@@ -198,3 +198,35 @@ module "dns" {
   tags       = local.common_tags
   depends_on = [azurerm_resource_group.main, module.vm]
 }
+
+##############################################################################
+# Storage Module - Helm Charts Repository
+##############################################################################
+
+module "helm_storage" {
+  source = "../../modules/storage"
+
+  storage_account_name = local.helm_storage_config.storage_account_name
+  resource_group_name  = azurerm_resource_group.main.name
+  location             = azurerm_resource_group.main.location
+
+  # Storage configuration
+  account_tier     = "Standard"
+  replication_type = "LRS" # Locally redundant storage for lab
+
+  # Container configuration
+  container_name        = local.helm_storage_config.container_name
+  container_access_type = "blob" # Public read access for Helm repo
+
+  # Public access for Helm repository
+  public_network_access_enabled = true
+  allow_public_containers       = true
+
+  # Enable versioning and lifecycle management
+  versioning_enabled       = true
+  soft_delete_retention_days = 7
+  enable_lifecycle_policy  = true
+
+  tags       = local.common_tags
+  depends_on = [azurerm_resource_group.main]
+}

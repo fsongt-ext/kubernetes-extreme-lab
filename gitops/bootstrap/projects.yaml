@@ -1,32 +1,32 @@
----
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: istiod
+  name: argocd-projects
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "3"  # After istio-base
+    argocd.argoproj.io/sync-wave: "-2"  # Deploy BEFORE all other apps
 spec:
-  project: platform
+  project: default  # Must use default since custom projects don't exist yet
 
   source:
     repoURL: git@github.com:fsongt-ext/kubernetes-extreme-lab.git
     targetRevision: main
-    path: platform/networking/istio/istiod
-    helm:
-      valueFiles:
-        - values.yaml
+    path: gitops/projects
+    directory:
+      recurse: false
+      include: '*.yaml'
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: istio-system
+    namespace: argocd
 
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
+      allowEmpty: false
     syncOptions:
       - CreateNamespace=true
     retry:
@@ -36,7 +36,9 @@ spec:
         factor: 2
         maxDuration: 3m
 
-  # Wait for istio-base CRDs
+  # Info for documentation
   info:
-    - name: 'Dependencies'
-      value: 'Requires istio-base to be synced first'
+    - name: 'Purpose'
+      value: 'Deploys AppProject CRDs that define RBAC and policies for platform and application teams'
+    - name: 'Contains'
+      value: 'platform-project.yaml, applications-project.yaml'

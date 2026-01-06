@@ -13,7 +13,7 @@ spec:
 
   source:
     repoURL: git@github.com:fsongt-ext/kubernetes-extreme-lab.git
-    targetRevision: feat/argocd
+    targetRevision: main
     path: platform/core/argocd
     helm:
       valueFiles:

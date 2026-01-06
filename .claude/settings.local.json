@@ -5,7 +5,10 @@
       "Bash(chmod:*)",
       "Bash(tree:*)",
       "Bash(gitops/environments/{lab,dev,staging,prod}/{platform,applications} )",
-      "Bash(gitops/projects)"
+      "Bash(gitops/projects)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(rm:*)"
     ]
   }
 }
