@@ -129,12 +129,24 @@ uninstall_k3s() {
 
     log_info "Connecting to VM: ${VM_USER}@${VM_IP}"
 
+    # Check if K3s uninstall script exists
+    log_info "Checking for K3s uninstall script..."
+    if ! ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${VM_USER}@${VM_IP}" \
+        "[ -f /usr/local/bin/k3s-uninstall.sh ]"; then
+        log_warning "K3s uninstall script not found on VM (may not be installed)"
+        return
+    fi
+
     # Run K3s uninstall script on the VM
-    if ssh -o StrictHostKeyChecking=no "${VM_USER}@${VM_IP}" \
-        "[ -f /usr/local/bin/k3s-uninstall.sh ] && sudo /usr/local/bin/k3s-uninstall.sh" 2>/dev/null; then
+    log_info "Running K3s uninstall script..."
+    if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${VM_USER}@${VM_IP}" \
+        "sudo /usr/local/bin/k3s-uninstall.sh"; then
         log_success "K3s uninstalled successfully from VM"
     else
-        log_warning "K3s uninstall script not found on VM or SSH failed"
+        log_error "K3s uninstall failed. Check SSH connection and VM status."
+        log_info "You can manually uninstall by running:"
+        log_info "  ssh ${VM_USER}@${VM_IP} 'sudo /usr/local/bin/k3s-uninstall.sh'"
+        return 1
     fi
 }
 

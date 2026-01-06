@@ -15,9 +15,6 @@ kong:
     # Database-less mode (no PostgreSQL required)
     database: "off"
 
-    # Declarative configuration
-    declarative_config: /kong_dbless/kong.yml
-
     # Admin API
     admin_listen: "0.0.0.0:8001, 0.0.0.0:8444 ssl"
     admin_gui_listen: "0.0.0.0:8002, 0.0.0.0:8445 ssl"
@@ -28,13 +25,13 @@ kong:
     # Logging
     log_level: "notice"
 
-    # Plugins
-    plugins: "bundled,oidc"
+    # Plugins (using only bundled plugins)
+    plugins: "bundled"
 
   # Resource limits for lab
   resources:
     requests:
-      cpu: 200m
+      cpu: 100m       # Reduced from 200m
       memory: 256Mi
     limits:
       cpu: 500m
@@ -47,11 +44,11 @@ kong:
 
     resources:
       requests:
-        cpu: 50m
+        cpu: 25m        # Reduced from 50m
         memory: 64Mi
-      limits:
-        cpu: 200m
-        memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
 
     env:
       # Publish service for LoadBalancer

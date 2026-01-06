@@ -40,10 +40,17 @@ locals {
       "servicelb", # Using MetalLB
     ]
     write-kubeconfig-mode = "0644"
+    flannel-backend       = "none" # Disabled - using Cilium instead
   }
 
   acr_config = {
     name = "k3slabacr${random_integer.suffix.result}"
+  }
+
+  # Helm chart storage configuration
+  helm_storage_config = {
+    storage_account_name = "k3slabhelm${random_integer.suffix.result}"
+    container_name       = "helm-charts"
   }
 
   # Keycloak configuration

@@ -186,7 +186,7 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: git@github.com:TrungHQ-02/kubernetes-extreme-lab
+    repoURL: git@github.com:fsongt-ext/kubernetes-extreme-lab
     targetRevision: main
     path: platform/new-component
   destination:
@@ -503,7 +503,7 @@ kubectl delete validatingwebhookconfiguration <name>
     IMAGE_TAG=${{ github.sha }}
 
     # Clone gitops repo
-    git clone git@github.com:TrungHQ-02/kubernetes-extreme-lab
+    git clone git@github.com:fsongt-ext/kubernetes-extreme-lab
     cd kubernetes-extreme-lab
 
     # Update image tag

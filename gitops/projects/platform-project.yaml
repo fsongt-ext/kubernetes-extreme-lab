@@ -1,10 +1,4 @@
 ---
-##############################################################################
-# Argo CD AppProject - Platform Components
-#
-# Defines RBAC, allowed resources, and policies for platform team
-##############################################################################
-
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
@@ -65,6 +59,8 @@ spec:
       kind: ValidatingWebhookConfiguration
     - group: 'cert-manager.io'
       kind: ClusterIssuer
+    - group: 'networking.k8s.io'
+      kind: IngressClass
     - group: 'networking.istio.io'
       kind: Gateway
     - group: 'kyverno.io'
@@ -76,15 +72,6 @@ spec:
   namespaceResourceWhitelist:
     - group: '*'
       kind: '*'
-
-  # Sync windows (optional maintenance windows)
-  syncWindows:
-    - kind: allow
-      schedule: '* * * * *'
-      duration: 24h
-      applications:
-        - '*'
-      manualSync: true
 
   # Orphaned resources monitoring
   orphanedResources:

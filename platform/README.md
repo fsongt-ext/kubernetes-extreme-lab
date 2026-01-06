@@ -235,7 +235,7 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: git@github.com:TrungHQ-02/kubernetes-extreme-lab
+    repoURL: git@github.com:fsongt-ext/kubernetes-extreme-lab
     targetRevision: main
     path: platform/core/cert-manager
     helm:

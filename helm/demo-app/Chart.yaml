@@ -15,9 +15,9 @@ maintainers:
   - name: Application Team
     email: appteam@example.com
 
-home: git@github.com:TrungHQ-02/kubernetes-extreme-lab
+home: git@github.com:fsongt-ext/kubernetes-extreme-lab
 sources:
-  - git@github.com:TrungHQ-02/kubernetes-extreme-lab/tree/main/applications/demo-app
+  - git@github.com:fsongt-ext/kubernetes-extreme-lab/tree/main/applications/demo-app
 
 annotations:
   # Platform integrations

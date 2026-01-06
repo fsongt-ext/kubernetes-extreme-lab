@@ -60,6 +60,6 @@ argo-cd:
   # Lab-specific repository
   configs:
     repositories:
-      - url: 'https://github.com/TrungHQ-02/kubernetes-extreme-lab.git'
+      - url: 'https://github.com/fsongt-ext/kubernetes-extreme-lab.git'
         type: git
         name: lab-repo

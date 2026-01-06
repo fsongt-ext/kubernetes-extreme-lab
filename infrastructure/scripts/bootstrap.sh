@@ -143,23 +143,12 @@ run_ansible() {
 
 verify_cluster() {
     log_info "Verifying K3s cluster..."
-
-    # Export kubeconfig
     export KUBECONFIG="${TERRAFORM_DIR}/kubeconfig.yaml"
 
     if ! kubectl cluster-info &> /dev/null; then
         log_error "Failed to connect to K3s cluster"
         return 1
     fi
-
-    log_info "Cluster information:"
-    kubectl cluster-info
-
-    log_info "Node status:"
-    kubectl get nodes
-
-    log_info "System pods:"
-    kubectl get pods -A
 
     log_success "Cluster verification completed"
 }
@@ -182,6 +171,7 @@ install_argocd() {
     # Create namespace
     kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
 
+
     # Add GitHub SSH known hosts
     log_info "Configuring SSH known hosts for GitHub..."
     kubectl create secret generic argocd-ssh-known-hosts \
@@ -189,18 +179,28 @@ install_argocd() {
         -n argocd \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    # Update repository.yaml with SSH key using yq
-    log_info "Updating repository configuration with SSH key..."
-    local repo_yaml="${PROJECT_ROOT}/gitops/bootstrap/repository.yaml"
-    local temp_yaml="/tmp/repository-temp.yaml"
+
+    # Create GitHub repository SSH secret directly (imperative approach)
+    log_info "Creating GitHub repository SSH secret..."
+    kubectl create secret generic github-repo-ssh \
+        --from-file=sshPrivateKey="$ARGOCD_SSH_KEY" \
+        --from-literal=url=git@github.com:fsongt-ext/kubernetes-extreme-lab.git \
+        --from-literal=type=git \
+        -n argocd \
+        --dry-run=client -o yaml | kubectl apply -f -
     
-    # Read SSH key and update YAML
-    cp "$repo_yaml" "$temp_yaml"
-    yq eval ".stringData.sshPrivateKey = \"$(cat "$ARGOCD_SSH_KEY")\"" -i "$temp_yaml"
+    # Label the secret so ArgoCD recognizes it
+    kubectl label secret github-repo-ssh -n argocd \
+        argocd.argoproj.io/secret-type=repository --overwrite
+    local repo_template="${PROJECT_ROOT}/gitops/bootstrap/repository.yaml"
+    local repo_temp="/tmp/argocd-repository-temp.yaml"
     
-    # Apply the repository secret
-    kubectl apply -f "$temp_yaml"
-    rm -f "$temp_yaml"
+    cp "$repo_template" "$repo_temp"
+    yq eval ".stringData.sshPrivateKey = \"$(cat "$ARGOCD_SSH_KEY")\"" -i "$repo_temp"
+    kubectl apply -f "$repo_temp"
+    rm -f "$repo_temp"
+    
+    log_success "SSH credentials configured"
 
     # Navigate to ArgoCD chart and update dependencies
     cd "${PROJECT_ROOT}/platform/core/argocd"
