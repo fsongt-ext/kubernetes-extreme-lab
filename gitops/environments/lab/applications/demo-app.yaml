@@ -16,7 +16,7 @@ spec:
   source:
     repoURL: git@github.com:fsongt-ext/kubernetes-extreme-lab.git
     targetRevision: main
-    path: applications/helm-charts/demo-app
+    path: helm/demo-app
     helm:
       valueFiles:
         - values.yaml

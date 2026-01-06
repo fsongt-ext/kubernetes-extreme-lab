@@ -208,3 +208,37 @@ output "generated_configs" {
     ansible_inventory = local_file.ansible_inventory.filename
   }
 }
+
+##############################################################################
+# Helm Storage Outputs
+##############################################################################
+
+output "helm_storage_account_name" {
+  description = "Helm chart storage account name"
+  value       = module.helm_storage.storage_account_name
+}
+
+output "helm_repo_url" {
+  description = "Helm repository URL (public access)"
+  value       = module.helm_storage.helm_repo_url
+}
+
+output "helm_container_name" {
+  description = "Helm charts container name"
+  value       = module.helm_storage.container_name
+}
+
+output "helm_storage_instructions" {
+  description = "Instructions for using Helm repository"
+  value       = <<-EOF
+    # Add Helm repository
+    helm repo add k3s-lab ${module.helm_storage.helm_repo_url}
+    helm repo update
+
+    # List available charts
+    helm search repo k3s-lab
+
+    # Install a chart
+    helm install my-release k3s-lab/<chart-name>
+  EOF
+}

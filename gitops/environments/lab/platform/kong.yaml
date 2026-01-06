@@ -14,7 +14,7 @@ spec:
 
   source:
     repoURL: git@github.com:fsongt-ext/kubernetes-extreme-lab.git
-    targetRevision: feat/argocd
+    targetRevision: main
     path: platform/networking/kong
     helm:
       valueFiles:

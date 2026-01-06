@@ -1,0 +1,153 @@
+##############################################################################
+# Online Boutique - Lab Environment Overrides
+##############################################################################
+
+# Enable network policies for security
+networkPolicies:
+  create: true
+
+# Enable Istio sidecars for service mesh
+sidecars:
+  create: true
+
+# Enable authorization policies for zero trust
+authorizationPolicies:
+  create: true
+
+# Disable OpenTelemetry collector (use platform observability)
+opentelemetryCollector:
+  create: false
+
+# Security context
+seccompProfile:
+  enable: true
+  type: RuntimeDefault
+
+securityContext:
+  enable: true
+
+# Reduced resources for lab environment
+adService:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+    limits:
+      cpu: 150m
+      memory: 180Mi
+
+cartService:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 80Mi
+    limits:
+      cpu: 150m
+      memory: 128Mi
+
+checkoutService:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 100m
+      memory: 100Mi
+
+currencyService:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 80Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+emailService:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 100m
+      memory: 100Mi
+
+frontend:
+  platform: local
+  externalService: true
+  cymbalBranding: false
+  singleSharedSession: false
+  # Enable Istio VirtualService for frontend
+  virtualService:
+    create: true
+    hosts:
+      - "boutique.lab.local"
+      - "*"
+    gateway:
+      name: istio-gateway
+      namespace: istio-system
+      labelKey: istio
+      labelValue: ingressgateway
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 100m
+      memory: 100Mi
+
+# Disable load generator to save resources
+loadGenerator:
+  create: false
+
+paymentService:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 80Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+productCatalogService:
+  extraLatency: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 100m
+      memory: 100Mi
+
+recommendationService:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 120Mi
+    limits:
+      cpu: 100m
+      memory: 220Mi
+
+shippingService:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 100m
+      memory: 100Mi
+
+# Use in-cluster Redis for cart database
+cartDatabase:
+  type: redis
+  connectionString: "redis-cart:6379"
+  inClusterRedis:
+    create: true
+    name: redis-cart
+    publicRepository: true
+  externalRedisTlsOrigination:
+    enable: false
+
+# Shopping assistant not available yet
+shoppingAssistantService:
+  create: false
